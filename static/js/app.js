@@ -4,6 +4,11 @@ let rainNode = null;
 let forestNode = null;
 let ribbitTimer = null;
 
+// Initial volume multipliers (0.0 to 1.0)
+let rainVolume = 0.5;
+let forestVolume = 0.5;
+let pondVolume = 0.5;
+
 // Audio synth functions
 function initAudio() {
     if (!audioCtx) {
@@ -31,7 +36,7 @@ function createRainNode() {
     filter.frequency.value = 1000;
 
     const gain = audioCtx.createGain();
-    gain.gain.value = 0.15; // Set volume
+    gain.gain.value = rainVolume * 0.3; // Scaled rain volume
 
     whiteNoise.connect(filter);
     filter.connect(gain);
@@ -77,7 +82,7 @@ function createForestNode() {
     lfo.start();
 
     const gain = audioCtx.createGain();
-    gain.gain.value = 0.25;
+    gain.gain.value = forestVolume * 0.4; // Scaled forest volume
 
     brownNoise.connect(filter);
     filter.connect(gain);
@@ -119,7 +124,7 @@ function chirp(time) {
     
     // Quick amplitude envelope
     gainNode.gain.setValueAtTime(0.001, time);
-    gainNode.gain.linearRampToValueAtTime(0.12, time + 0.02);
+    gainNode.gain.linearRampToValueAtTime(0.12 * pondVolume, time + 0.02);
     gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
     
     osc1.connect(gainNode);
@@ -182,6 +187,24 @@ function toggleAmbient(type) {
             };
             setNextRibbit();
         }
+    }
+}
+
+// Adjust ambient and sound effect volumes dynamically
+function adjustVolume(type, value) {
+    const val = parseFloat(value) / 100;
+    if (type === 'rain') {
+        rainVolume = val;
+        if (rainNode) {
+            rainNode.gainNode.gain.setValueAtTime(rainVolume * 0.3, audioCtx.currentTime);
+        }
+    } else if (type === 'forest') {
+        forestVolume = val;
+        if (forestNode) {
+            forestNode.gainNode.gain.setValueAtTime(forestVolume * 0.4, audioCtx.currentTime);
+        }
+    } else if (type === 'pond') {
+        pondVolume = val;
     }
 }
 
