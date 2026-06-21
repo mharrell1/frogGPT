@@ -27,9 +27,15 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <div class="header-logo">
-                <span class="logo-emoji">🐸</span>
-                <h1>Froggy Pomodoro</h1>
+            <div class="header-main">
+                <div class="header-logo">
+                    <span class="logo-emoji">🐸</span>
+                    <h1>Froggy Pomodoro</h1>
+                </div>
+                <button id="btn-cloud-sync" class="btn btn-sync-status" onclick="openSyncModal()" title="Account Settings">
+                    <span class="sync-icon">👤</span>
+                    <span id="sync-status-text">Sign In</span>
+                </button>
             </div>
             <p class="tagline">Hop your way to productivity with Lily the study frog!</p>
         </header>
@@ -214,6 +220,40 @@
     <!-- Hidden audio tags for synthesised sounds or backup ambient audios -->
     <audio id="sound-rain" loop src="https://assets.mixkit.co/active_storage/sfx/2521/2521-84.wav"></audio> <!-- Rain placeholder/simple audio loop -->
     <audio id="sound-forest" loop src="https://assets.mixkit.co/active_storage/sfx/1233/1233-84.wav"></audio>
+
+    <!-- Account & Sync Modal -->
+    <div id="sync-modal" class="modal-overlay">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2>👤 Account & Sync</h2>
+                <button class="btn-close" onclick="closeSyncModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Logged Out View -->
+                <div id="auth-logged-out">
+                    <p class="modal-help">Sign in or register to sync your tasks across your devices.</p>
+                    <div class="form-group">
+                        <label for="auth-username">Username</label>
+                        <input type="text" id="auth-username" placeholder="froggy_scholar">
+                    </div>
+                    <div class="form-group">
+                        <label for="auth-password">Password</label>
+                        <input type="password" id="auth-password" placeholder="••••••••">
+                    </div>
+                    <div class="auth-buttons">
+                        <button class="btn btn-primary" onclick="handleBackendLogin()">Log In</button>
+                        <button class="btn btn-secondary" onclick="handleBackendSignup()">Register</button>
+                    </div>
+                </div>
+                <!-- Logged In View -->
+                <div id="auth-logged-in" style="display: none;">
+                    <p class="sync-success">✓ Connected & Syncing!</p>
+                    <p class="user-info">Logged in as: <strong id="logged-in-username">guest</strong></p>
+                    <button class="btn btn-secondary" onclick="handleBackendLogout()">Log Out</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
