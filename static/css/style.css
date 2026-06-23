@@ -1220,6 +1220,16 @@ input[type=number] {
     gap: 12px;
 }
 
+.spotify-tip-banner {
+    font-size: 0.8rem;
+    color: var(--color-mint);
+    background: rgba(135, 195, 143, 0.08);
+    border: 1px dashed rgba(135, 195, 143, 0.2);
+    padding: 10px 14px;
+    border-radius: 12px;
+    line-height: 1.4;
+}
+
 .curated-playlists h3 {
     font-family: var(--font-heading);
     font-size: 1rem;
