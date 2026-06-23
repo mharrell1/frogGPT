@@ -1728,7 +1728,7 @@ input[type=number] {
 
 /* --- Calendar Left Drawer Styling --- */
 /* Overlay overrides for drawer behaviour */
-#calendar-modal.modal-overlay {
+#calendar-modal.modal-overlay, #games-modal.modal-overlay {
     justify-content: flex-start;
     align-items: stretch;
     background: rgba(10, 20, 18, 0.4);
@@ -1758,7 +1758,8 @@ input[type=number] {
     animation: none !important; /* disable modal-pop scale animation */
 }
 
-#calendar-modal.modal-overlay.open .calendar-modal-content {
+#calendar-modal.modal-overlay.open .calendar-modal-content,
+#games-modal.modal-overlay.open .calendar-modal-content {
     transform: translateX(0);
 }
 
