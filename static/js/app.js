@@ -1534,7 +1534,7 @@ async function sendFrogGPTMessage(messageText) {
 
     // Check quota limit first
     const quotaData = getQueryCountForToday();
-    if (quotaData.count >= 50) {
+    if (quotaData.count >= 20) {
         if (input) input.value = '';
         
         // Append user message
@@ -1554,8 +1554,8 @@ async function sendFrogGPTMessage(messageText) {
         aiMsgElem.innerHTML = `
             <div class="chat-avatar">🐸</div>
             <div class="chat-bubble">
-                <p>⚠️ **Daily Free Quota Reached (50/50)**</p>
-                <p>Ribbit! You have reached your daily free tier limit of 50 queries. Please wait until tomorrow for the counter to reset, or run the app locally with your own API key to continue studying!</p>
+                <p>⚠️ **Daily Free Quota Reached (20/20)**</p>
+                <p>Ribbit! You have reached your daily free tier limit of 20 queries. Please wait until tomorrow for the counter to reset, or run the app locally with your own API key to continue studying!</p>
             </div>
         `;
         chatLog.appendChild(aiMsgElem);
@@ -2497,8 +2497,8 @@ function updateQueryCounterUI() {
     const quotaData = getQueryCountForToday();
     const counterElem = document.getElementById('froggpt-query-counter');
     if (counterElem) {
-        counterElem.innerText = `${quotaData.count} / 50`;
-        if (quotaData.count >= 50) {
+        counterElem.innerText = `${quotaData.count} / 20`;
+        if (quotaData.count >= 20) {
             counterElem.style.color = '#ff595e';
             counterElem.style.background = 'rgba(255, 89, 94, 0.1)';
         } else {
