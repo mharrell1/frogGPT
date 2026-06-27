@@ -62,6 +62,7 @@ Welcome to **Froggy Pomodoro**, a cozy and aesthetic productivity web applicatio
 * **Multi-Format Document Imports:** Click the attachment icon (`📎`) to upload `.txt`, `.md`, `.docx`, or `.pdf` documents to generate personalized study decks.
 * **Daily Quota Counter & Model Selector:**
   * Displays a daily free quota tracker (**20 queries/day limit**) that resets daily via browser `localStorage`.
+  * Includes an **interactive countdown timer** showing exactly when your daily quota will replenish (ticking down until midnight local time, or automatically triggered when API rate limit/429 errors occur).
   * Multi-model switching between **Gemini 2.5 Flash** (default) and **Gemini 2.5 Pro** with intelligent error parsing for unsupported models.
 
 ---
