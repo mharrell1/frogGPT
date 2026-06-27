@@ -1211,6 +1211,7 @@ input[type=number] {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+    align-items: stretch;
 }
 
 @media (max-width: 768px) {
@@ -1298,15 +1299,22 @@ input[type=number] {
 }
 
 .spotify-iframe-container {
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 16px;
     overflow: hidden;
-    height: 152px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.02);
+    height: 100%;
+    min-height: 152px;
 }
+
+.spotify-iframe-container iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+
 
 /* Mobile & Tablet Responsiveness Adjustments */
 @media (max-width: 1024px) {
@@ -2152,3 +2160,762 @@ input[type=number] {
     gap: 12px;
 }
 
+/* --- frogGPT AI Study Agent Modal & Styling --- */
+.froggpt-modal-content {
+    background: rgba(18, 30, 26, 0.97) !important;
+    max-width: 1200px;
+    width: 95%;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.froggpt-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.froggpt-header-icon {
+    font-size: 2rem;
+}
+
+.froggpt-header-title h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-mint);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.badge-ai {
+    background: linear-gradient(135deg, var(--color-emerald), var(--color-sage));
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.froggpt-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    overflow: hidden;
+    padding-top: 10px;
+}
+
+.froggpt-intro {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--panel-border);
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    color: var(--color-text-dim);
+    line-height: 1.5;
+}
+
+.froggpt-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.btn-suggestion-pill {
+    background: rgba(135, 195, 143, 0.15);
+    border: 1px solid var(--panel-border);
+    color: var(--color-mint);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-suggestion-pill:hover {
+    background: var(--color-emerald);
+    color: var(--color-cream);
+    transform: translateY(-2px);
+    border-color: var(--color-sage);
+}
+
+.froggpt-chat-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 8px;
+}
+
+.froggpt-chat-log::-webkit-scrollbar {
+    width: 6px;
+}
+
+.froggpt-chat-log::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.froggpt-chat-log::-webkit-scrollbar-thumb {
+    background: rgba(135, 195, 143, 0.15);
+    border-radius: 10px;
+}
+
+.froggpt-chat-log::-webkit-scrollbar-thumb:hover {
+    background: rgba(135, 195, 143, 0.3);
+}
+
+.chat-message {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    animation: slideIn 0.3s ease;
+}
+
+.user-message {
+    flex-direction: row-reverse;
+}
+
+.chat-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(135, 195, 143, 0.2);
+    border: 1px solid var(--color-sage);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.user-message .chat-avatar {
+    background: var(--color-emerald);
+    border-color: var(--color-mint);
+}
+
+.chat-bubble {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    padding: 14px 18px;
+    border-radius: 18px;
+    border-top-left-radius: 4px;
+    max-width: 85%;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--color-cream);
+}
+
+.user-message .chat-bubble {
+    background: var(--color-emerald);
+    border-color: rgba(255, 255, 255, 0.15);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 4px;
+}
+
+.chat-bubble p {
+    margin-bottom: 10px;
+}
+
+.chat-bubble p:last-child {
+    margin-bottom: 0;
+}
+
+/* Beautiful Markdown Tables & Lists in Chat */
+.chat-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.9rem;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+}
+
+.chat-bubble th, .chat-bubble td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+}
+
+.chat-bubble th {
+    background: rgba(135, 195, 143, 0.2);
+    color: var(--color-mint);
+    font-weight: 600;
+}
+
+.chat-bubble tr:last-child td {
+    border-bottom: none;
+}
+
+.chat-bubble ul, .chat-bubble ol {
+    margin: 8px 0 8px 22px;
+    padding: 0;
+}
+
+.chat-bubble li {
+    margin-bottom: 6px;
+}
+
+.chat-bubble h1, .chat-bubble h2, .chat-bubble h3, .chat-bubble h4 {
+    font-family: var(--font-heading);
+    color: var(--color-mint);
+    margin: 14px 0 8px 0;
+}
+
+.chat-bubble h1:first-child, .chat-bubble h2:first-child, .chat-bubble h3:first-child {
+    margin-top: 0;
+}
+
+.chat-thinking {
+    font-style: italic;
+    color: var(--color-sage);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.froggpt-input-wrapper {
+    display: flex;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    padding: 8px 12px;
+    border-radius: 18px;
+    align-items: center;
+    transition: border-color 0.2s ease;
+}
+
+.froggpt-input-wrapper:focus-within {
+    border-color: var(--color-sage);
+}
+
+#froggpt-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--color-cream);
+    padding: 8px 6px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.btn-froggpt-send {
+    background: var(--color-sage);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 14px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.btn-froggpt-send:hover {
+    background: var(--color-mint);
+    transform: scale(1.05);
+}
+
+.btn-froggpt-send:active {
+    transform: scale(0.95);
+}
+
+/* frogGPT Model Selection styling */
+.model-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--panel-border);
+}
+
+.model-select-wrapper label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-mint);
+}
+
+.froggpt-model-select {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    color: var(--color-cream);
+    padding: 6px 12px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.froggpt-model-select:focus {
+    border-color: var(--color-mint);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* --- Interactive Flashcard Widget & Flipping Effects --- */
+.flashcards-player-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
+    height: 100%;
+}
+
+.player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 10px;
+}
+
+.player-header h3 {
+    margin: 0;
+    color: var(--color-mint);
+    font-size: 1.15rem;
+}
+
+/* Flashcard 3D flip card styling */
+.flashcard-wrapper {
+    perspective: 1000px;
+    width: 100%;
+    max-width: 480px;
+    height: 240px;
+    margin: 15px auto;
+    cursor: pointer;
+}
+
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+}
+
+.flashcard-wrapper.flipped .flashcard-inner {
+    transform: rotateY(180deg);
+}
+
+.flashcard-front, .flashcard-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.flashcard-front {
+    background: linear-gradient(135deg, rgba(24, 38, 30, 0.95), rgba(16, 26, 22, 0.95));
+    color: var(--color-cream);
+}
+
+.flashcard-back {
+    background: linear-gradient(135deg, rgba(30, 48, 40, 0.98), rgba(20, 32, 28, 0.98));
+    color: var(--color-mint);
+    transform: rotateY(180deg);
+    overflow-y: auto;
+}
+
+.flashcard-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-sage);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.flashcard-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Card navigation controls */
+.flashcard-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 480px;
+    width: 100%;
+    margin: 10px auto;
+}
+
+.card-index-indicator {
+    font-size: 0.85rem;
+    color: var(--color-text-dim);
+}
+
+/* Chat view specific card container */
+.chat-flashcard-widget {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 10px;
+}
+
+.widget-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.widget-title-bar h4 {
+    margin: 0;
+    color: var(--color-mint);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Flashcards Library Modal content */
+.flashcards-modal-content {
+    max-width: 600px;
+    width: 90%;
+    height: 70vh;
+}
+
+.flashcards-library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    max-height: calc(70vh - 100px);
+    padding-right: 4px;
+}
+
+.flashcard-library-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.flashcard-library-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-sage);
+}
+
+.deck-info h4 {
+    margin: 0 0 4px 0;
+    color: var(--color-cream);
+    font-size: 0.95rem;
+}
+
+.deck-info p {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--color-text-dim);
+}
+
+.deck-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.flashcards-library-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--color-text-dim);
+}
+
+.flashcards-library-empty .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* --- Interactive Quiz Widget --- */
+.quiz-widget {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.quiz-question-container {
+    border-bottom: 1px dashed var(--panel-border);
+    padding-bottom: 14px;
+}
+
+.quiz-question-container:last-child {
+    border-bottom: none;
+}
+
+.quiz-question-num {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-sage);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.quiz-question-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-cream);
+    margin: 0 0 10px 0;
+}
+
+.quiz-options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quiz-option-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--color-text-dim);
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quiz-option-btn:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--color-sage);
+    color: var(--color-cream);
+}
+
+.quiz-option-btn.selected {
+    background: rgba(135, 195, 143, 0.15);
+    border-color: var(--color-mint);
+    color: var(--color-mint);
+    font-weight: 600;
+}
+
+.quiz-option-btn.correct-reveal {
+    background: rgba(74, 150, 95, 0.25) !important;
+    border-color: #4a965f !important;
+    color: #a3e2b3 !important;
+}
+
+.quiz-option-btn.wrong-reveal {
+    background: rgba(200, 70, 70, 0.2) !important;
+    border-color: #c84646 !important;
+    color: #f7a3a3 !important;
+}
+
+.quiz-explanation {
+    margin-top: 8px;
+    background: rgba(135, 195, 143, 0.08);
+    border-left: 3px solid var(--color-sage);
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    color: var(--color-text-dim);
+    line-height: 1.4;
+}
+
+.quiz-results-summary {
+    background: linear-gradient(135deg, rgba(135, 195, 143, 0.1), rgba(0, 0, 0, 0.3));
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.quiz-score-highlight {
+    font-size: 1.8rem;
+    color: var(--color-mint);
+    margin-bottom: 5px;
+}
+
+/* --- Practice Test Widget --- */
+.test-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-mint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 5px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.test-textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--color-cream);
+    padding: 10px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    min-height: 60px;
+    resize: vertical;
+    outline: none;
+}
+
+.test-textarea:focus {
+    border-color: var(--color-mint);
+}
+
+.test-short-answer-feedback {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-written-answer {
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.model-sample-answer {
+    font-size: 0.85rem;
+    background: rgba(74, 150, 95, 0.1);
+    border-left: 3px solid #4a965f;
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+}
+
+.grading-guidelines {
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+    font-style: italic;
+}
+
+/* Split Layout styling for full-size frogGPT tab */
+.froggpt-modal-body.split-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.froggpt-chat-column {
+    flex: 4.5;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.froggpt-study-column {
+    flex: 5.5;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    padding: 20px;
+}
+
+.froggpt-study-content {
+    height: 100%;
+}
+
+.study-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    min-height: 300px;
+    color: var(--color-text-dim);
+    padding: 20px;
+}
+
+.placeholder-mascot {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    animation: bounce 2s infinite ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.study-placeholder h3 {
+    margin: 0 0 10px 0;
+    color: var(--color-mint);
+    font-size: 1.25rem;
+}
+
+.study-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+@media (max-width: 850px) {
+    .froggpt-modal-body.split-layout {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .froggpt-chat-column, .froggpt-study-column {
+        width: 100%;
+        height: auto;
+        max-height: 50%;
+        flex: none;
+    }
+    .froggpt-modal-content {
+        max-width: 95%;
+        height: 90vh;
+    }
+}

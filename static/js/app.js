@@ -1474,3 +1474,977 @@ window.openGamesModal = openGamesModal;
 window.closeGamesModal = closeGamesModal;
 window.restart2048 = restart2048;
 window.move2048 = move2048;
+
+/* --- frogGPT AI Study Agent Modal & Communication --- */
+let frogGPTSessionId = null;
+let importedDocumentText = '';
+let importedDocumentName = '';
+
+function openFrogGPTModal() {
+    closeCalendarModal();
+    closeGamesModal();
+    const modal = document.getElementById('froggpt-modal');
+    if (modal) {
+        modal.classList.add('open');
+        const sidebarBtn = document.getElementById('btn-sidebar-froggpt');
+        if (sidebarBtn) sidebarBtn.classList.add('active');
+        // Set focus on input
+        setTimeout(() => {
+            const input = document.getElementById('froggpt-input');
+            if (input) input.focus();
+        }, 100);
+    }
+}
+
+function closeFrogGPTModal() {
+    const modal = document.getElementById('froggpt-modal');
+    if (modal) {
+        modal.classList.remove('open');
+    }
+    const sidebarBtn = document.getElementById('btn-sidebar-froggpt');
+    if (sidebarBtn) sidebarBtn.classList.remove('active');
+}
+
+function handleQuickPrompt(promptText) {
+    const input = document.getElementById('froggpt-input');
+    if (input) {
+        input.value = promptText;
+        sendFrogGPTMessage(promptText);
+    }
+}
+
+function handleFrogGPTSubmit(event) {
+    event.preventDefault();
+    const input = document.getElementById('froggpt-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    sendFrogGPTMessage(text);
+}
+
+async function sendFrogGPTMessage(messageText) {
+    const input = document.getElementById('froggpt-input');
+    const chatLog = document.getElementById('froggpt-chat-log');
+    const sendBtn = document.getElementById('btn-froggpt-send');
+    if (!chatLog) return;
+
+    if (input) input.value = '';
+
+    // Append user message
+    const userMsgElem = document.createElement('div');
+    userMsgElem.className = 'chat-message user-message';
+    userMsgElem.innerHTML = `
+        <div class="chat-avatar">👤</div>
+        <div class="chat-bubble">
+            <p>${escapeHTML(messageText)}</p>
+        </div>
+    `;
+    chatLog.appendChild(userMsgElem);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    // Append thinking message
+    const thinkingElem = document.createElement('div');
+    thinkingElem.className = 'chat-message ai-message thinking-message';
+    thinkingElem.innerHTML = `
+        <div class="chat-avatar">🐸</div>
+        <div class="chat-bubble">
+            <div class="chat-thinking">🐸 Lily is thinking & studying...</div>
+        </div>
+    `;
+    chatLog.appendChild(thinkingElem);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    if (input) input.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
+
+    const modelSelect = document.getElementById('froggpt-model-select');
+    const selectedModel = modelSelect ? modelSelect.value : 'gemini-2.5-flash';
+
+    try {
+        const response = await fetch('/api/froggpt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: messageText,
+                session_id: frogGPTSessionId,
+                model: selectedModel,
+                imported_content: importedDocumentText
+            })
+        });
+
+        // Remove thinking message
+        if (thinkingElem.parentNode) {
+            thinkingElem.parentNode.removeChild(thinkingElem);
+        }
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.session_id) {
+                frogGPTSessionId = data.session_id;
+            }
+
+            const aiMsgElem = document.createElement('div');
+            aiMsgElem.className = 'chat-message ai-message';
+            
+            // Format response with Marked.js if available, otherwise fallback to escapeHTML/paragraphs
+            let formattedHTML = '';
+            if (typeof marked !== 'undefined') {
+                formattedHTML = marked.parse(data.response || '');
+            } else {
+                formattedHTML = `<p>${escapeHTML(data.response || '')}</p>`;
+            }
+
+            let actionBtnHTML = '';
+            if (data.structured_data && data.subagent_author) {
+                const deckJsonId = `deck-data-${Date.now()}`;
+                window[deckJsonId] = data.structured_data;
+                actionBtnHTML = `
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-primary btn-sm" onclick="loadWidgetFromWindow('${deckJsonId}', '${data.subagent_author}')" style="background: var(--color-mint); border: none; color: var(--bg-dark); font-weight: bold; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                            🎯 Open in Study Panel
+                        </button>
+                    </div>
+                `;
+            }
+
+            aiMsgElem.innerHTML = `
+                <div class="chat-avatar">🐸</div>
+                <div class="chat-bubble">
+                    ${formattedHTML}
+                    ${actionBtnHTML}
+                </div>
+            `;
+            chatLog.appendChild(aiMsgElem);
+            
+            if (data.structured_data && data.subagent_author) {
+                renderInteractiveWidget('froggpt-study-content', data.subagent_author, data.structured_data);
+            }
+
+            // Speak a cheerful response in the main window speech bubble too!
+            document.getElementById('bubble-text').textContent = "Ribbit! I just answered your study question in frogGPT!";
+            playRibbit();
+        } else {
+            const errData = await response.json().catch(() => ({}));
+            const errorMsgElem = document.createElement('div');
+            errorMsgElem.className = 'chat-message ai-message';
+            errorMsgElem.innerHTML = `
+                <div class="chat-avatar">🐸</div>
+                <div class="chat-bubble" style="border-color: #ff595e;">
+                    <p>⚠️ Oops! Error communicating with frogGPT: ${escapeHTML(errData.error || response.statusText)}</p>
+                </div>
+            `;
+            chatLog.appendChild(errorMsgElem);
+        }
+    } catch (err) {
+        console.error("Error communicating with frogGPT:", err);
+        if (thinkingElem.parentNode) {
+            thinkingElem.parentNode.removeChild(thinkingElem);
+        }
+        const errorMsgElem = document.createElement('div');
+        errorMsgElem.className = 'chat-message ai-message';
+        errorMsgElem.innerHTML = `
+            <div class="chat-avatar">🐸</div>
+            <div class="chat-bubble" style="border-color: #ff595e;">
+                <p>⚠️ Oops! Could not connect to the server. Please check your network and ensure the Flask backend is running.</p>
+            </div>
+        `;
+        chatLog.appendChild(errorMsgElem);
+    } finally {
+        if (input) {
+            input.disabled = false;
+            input.focus();
+        }
+        if (sendBtn) sendBtn.disabled = false;
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+}
+
+// --- Interactive Widgets rendering ---
+function renderInteractiveWidget(containerId, type, data) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (type === 'flashcard_agent') {
+        renderFlashcards(container, data);
+    } else if (type === 'quiz_agent') {
+        renderQuiz(container, data);
+    } else if (type === 'test_agent') {
+        renderPracticeTest(container, data);
+    }
+}
+
+function renderFlashcards(container, deck, isLibraryView = false, deckId = null) {
+    const originalCards = deck.cards || [];
+    if (originalCards.length === 0) {
+        container.innerHTML = '<p>No cards available in this deck.</p>';
+        return;
+    }
+
+    // Initialize starred states
+    originalCards.forEach(card => {
+        if (card.starred === undefined) card.starred = false;
+    });
+
+    let displayCards = [...originalCards];
+    let currentIndex = 0;
+    let showStarredOnly = false;
+    let isShuffled = false;
+
+    const saveLibraryDeckState = () => {
+        if (isLibraryView && deckId) {
+            let savedDecks = [];
+            try {
+                savedDecks = JSON.parse(localStorage.getItem('saved_flashcard_decks')) || [];
+            } catch (e) {
+                savedDecks = [];
+            }
+            const idx = savedDecks.findIndex(d => d.id === deckId);
+            if (idx !== -1) {
+                savedDecks[idx].cards = originalCards;
+                localStorage.setItem('saved_flashcard_decks', JSON.stringify(savedDecks));
+            }
+        }
+    };
+
+    const updateCardDisplay = () => {
+        if (displayCards.length === 0) {
+            container.querySelector('.flashcard-text-front').innerHTML = `<p class="flashcard-text">No cards match the filter.</p>`;
+            container.querySelector('.flashcard-text-back').innerHTML = `<p class="flashcard-text">Try starring some concepts first!</p>`;
+            container.querySelector('.card-index-indicator').innerText = `Card 0 of 0`;
+            container.querySelector('.btn-star-toggle').style.display = 'none';
+            return;
+        }
+
+        container.querySelector('.btn-star-toggle').style.display = 'block';
+        const card = displayCards[currentIndex];
+        const topicLabel = card.topic ? `<span class="flashcard-tag">${escapeHTML(card.topic)}</span>` : '';
+        
+        container.querySelector('.flashcard-text-front').innerHTML = `${topicLabel}<p class="flashcard-text">${escapeHTML(card.question)}</p>`;
+        container.querySelector('.flashcard-text-back').innerHTML = `<p class="flashcard-text">${escapeHTML(card.answer)}</p>`;
+        container.querySelector('.card-index-indicator').innerText = `Card ${currentIndex + 1} of ${displayCards.length}`;
+        
+        // Star icon state
+        const starBtn = container.querySelector('.btn-star-toggle');
+        if (card.starred) {
+            starBtn.innerHTML = '★';
+            starBtn.style.color = '#ffd166';
+        } else {
+            starBtn.innerHTML = '☆';
+            starBtn.style.color = 'var(--color-text-dim)';
+        }
+
+        // Reset flipped state
+        container.querySelector('.flashcard-wrapper').classList.remove('flipped');
+    };
+
+    container.innerHTML = `
+        <div class="chat-flashcard-widget">
+            <div class="widget-title-bar">
+                <h4>📇 ${escapeHTML(deck.title || 'Flashcard Deck')}</h4>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn btn-secondary btn-sm btn-filter-starred" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: #fff; padding: 4px 8px; border-radius: 8px; cursor: pointer; font-size: 0.75rem;">⭐ Starred Only</button>
+                    ${!isLibraryView ? `<button class="btn btn-primary btn-sm btn-save-deck" style="background: var(--color-sage); border-color: var(--panel-border); color: #fff; font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; cursor: pointer;">Save to Library</button>` : ''}
+                </div>
+            </div>
+            <div class="flashcard-wrapper" style="position: relative;">
+                <!-- Star Toggle Button inside the card wrapper -->
+                <button class="btn-star-toggle" title="Star this concept" style="position: absolute; top: 12px; right: 12px; z-index: 10; background: none; border: none; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s;">☆</button>
+                
+                <div class="flashcard-inner">
+                    <div class="flashcard-front">
+                        <div class="flashcard-text-front"></div>
+                        <div style="font-size:0.75rem; color:var(--color-sage); margin-top:15px; opacity:0.7;">Click to Flip 🔄</div>
+                    </div>
+                    <div class="flashcard-back">
+                        <div class="flashcard-text-back"></div>
+                        <div style="font-size:0.75rem; color:var(--color-mint); margin-top:15px; opacity:0.7;">Click to Flip 🔄</div>
+                    </div>
+                </div>
+            </div>
+            <div class="flashcard-controls">
+                <button class="btn btn-secondary btn-sm btn-prev" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: #fff; padding: 5px 12px; border-radius: 8px; cursor: pointer;">◀ Prev</button>
+                <button class="btn btn-secondary btn-sm btn-shuffle" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: #fff; padding: 5px 12px; border-radius: 8px; cursor: pointer;">🔀 Shuffle</button>
+                <span class="card-index-indicator">Card 1 of ${displayCards.length}</span>
+                <button class="btn btn-secondary btn-sm btn-next" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: #fff; padding: 5px 12px; border-radius: 8px; cursor: pointer;">Next ▶</button>
+            </div>
+        </div>
+    `;
+
+    // Flip handler
+    const wrapper = container.querySelector('.flashcard-wrapper');
+    wrapper.addEventListener('click', (e) => {
+        // Don't flip if they clicked the star toggle button
+        if (e.target.classList.contains('btn-star-toggle')) return;
+        wrapper.classList.toggle('flipped');
+    });
+
+    // Star Toggle Handler
+    const starBtn = container.querySelector('.btn-star-toggle');
+    starBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (displayCards.length === 0) return;
+        const card = displayCards[currentIndex];
+        card.starred = !card.starred;
+        
+        // Visual effect bounce
+        starBtn.style.transform = 'scale(1.3)';
+        setTimeout(() => { starBtn.style.transform = 'scale(1)'; }, 200);
+
+        saveLibraryDeckState();
+        updateCardDisplay();
+    });
+
+    // Prev/Next handlers
+    container.querySelector('.btn-prev').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCardDisplay();
+        }
+    });
+
+    container.querySelector('.btn-next').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentIndex < displayCards.length - 1) {
+            currentIndex++;
+            updateCardDisplay();
+        }
+    });
+
+    // Shuffle Handler
+    const shuffleBtn = container.querySelector('.btn-shuffle');
+    shuffleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (displayCards.length <= 1) return;
+
+        if (!isShuffled) {
+            // Fisher-Yates Shuffle
+            for (let i = displayCards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [displayCards[i], displayCards[j]] = [displayCards[j], displayCards[i]];
+            }
+            isShuffled = true;
+            shuffleBtn.innerText = '🔄 Reset';
+            shuffleBtn.style.borderColor = 'var(--color-mint)';
+        } else {
+            // Restore original order based on originalCards filter
+            if (showStarredOnly) {
+                displayCards = originalCards.filter(c => c.starred);
+            } else {
+                displayCards = [...originalCards];
+            }
+            isShuffled = false;
+            shuffleBtn.innerText = '🔀 Shuffle';
+            shuffleBtn.style.borderColor = 'var(--panel-border)';
+        }
+        
+        currentIndex = 0;
+        updateCardDisplay();
+    });
+
+    // Filter Starred Handler
+    const filterBtn = container.querySelector('.btn-filter-starred');
+    filterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        if (!showStarredOnly) {
+            const starredCards = originalCards.filter(c => c.starred);
+            if (starredCards.length === 0) {
+                alert("You haven't starred any cards in this deck yet! Click the star icon (☆) on the top-right of any card to save it for review.");
+                return;
+            }
+            displayCards = starredCards;
+            showStarredOnly = true;
+            filterBtn.style.background = 'rgba(255, 209, 102, 0.15)';
+            filterBtn.style.borderColor = '#ffd166';
+            filterBtn.style.color = '#ffd166';
+        } else {
+            displayCards = [...originalCards];
+            showStarredOnly = false;
+            filterBtn.style.background = 'rgba(255,255,255,0.05)';
+            filterBtn.style.borderColor = 'var(--panel-border)';
+            filterBtn.style.color = '#fff';
+        }
+
+        // Reset shuffle state on filter toggle
+        isShuffled = false;
+        shuffleBtn.innerText = '🔀 Shuffle';
+        shuffleBtn.style.borderColor = 'var(--panel-border)';
+        
+        currentIndex = 0;
+        updateCardDisplay();
+    });
+
+    // Save to Library Handler
+    if (!isLibraryView) {
+        container.querySelector('.btn-save-deck').addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveDeckToLibrary(deck);
+        });
+    }
+
+    // Initialize display
+    updateCardDisplay();
+}
+
+function saveDeckToLibrary(deck) {
+    let savedDecks = [];
+    try {
+        savedDecks = JSON.parse(localStorage.getItem('saved_flashcard_decks')) || [];
+    } catch (e) {
+        savedDecks = [];
+    }
+    
+    // Add deck with unique ID and timestamp
+    const newDeck = {
+        id: `deck-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        title: deck.title || 'Untitled Deck',
+        description: deck.description || '',
+        cards: deck.cards || []
+    };
+    
+    savedDecks.push(newDeck);
+    localStorage.setItem('saved_flashcard_decks', JSON.stringify(savedDecks));
+    alert('Deck saved successfully to your Flashcards Library! 📇');
+}
+
+function renderQuiz(container, quiz) {
+    const questions = quiz.questions || [];
+    if (questions.length === 0) {
+        container.innerHTML = '<p>No questions available in this quiz.</p>';
+        return;
+    }
+
+    const userAnswers = new Array(questions.length).fill(null);
+
+    const renderQuizContent = (showResults = false) => {
+        let questionsHTML = '';
+        let score = 0;
+
+        questions.forEach((q, qIdx) => {
+            let optionsHTML = '';
+            
+            let correctLetter = '';
+            if (q.correct_answer) {
+                const match = q.correct_answer.match(/^([A-D])(?:\)| |$)/i);
+                if (match) {
+                    correctLetter = match[1].toUpperCase();
+                } else {
+                    correctLetter = q.correct_answer.trim().charAt(0).toUpperCase();
+                }
+            }
+
+            q.options.forEach((opt, optIdx) => {
+                const optionLetter = String.fromCharCode(65 + optIdx); // A, B, C, D
+                const isSelected = userAnswers[qIdx] === optIdx;
+                let optionClass = 'quiz-option-btn';
+                if (isSelected) optionClass += ' selected';
+
+                if (showResults) {
+                    const isCorrectOption = optionLetter === correctLetter;
+                    if (isCorrectOption) {
+                        optionClass += ' correct-reveal';
+                        if (isSelected) score++;
+                    } else if (isSelected) {
+                        optionClass += ' wrong-reveal';
+                    }
+                }
+
+                optionsHTML += `
+                    <button class="${optionClass}" data-q="${qIdx}" data-opt="${optIdx}" ${showResults ? 'disabled' : ''}>
+                        <span class="option-letter" style="font-weight:bold; color:var(--color-mint);">${optionLetter}.</span> 
+                        <span>${escapeHTML(opt.replace(/^[A-D]\)?\s*/i, ''))}</span>
+                    </button>
+                `;
+            });
+
+            const explanationHTML = (showResults && q.explanation) ? `
+                <div class="quiz-explanation">
+                    <strong>Explanation:</strong> ${escapeHTML(q.explanation)}
+                </div>
+            ` : '';
+
+            questionsHTML += `
+                <div class="quiz-question-container">
+                    <div class="quiz-question-num">Question ${qIdx + 1}</div>
+                    <p class="quiz-question-text">${escapeHTML(q.question)}</p>
+                    <div class="quiz-options-list">
+                        ${optionsHTML}
+                    </div>
+                    ${explanationHTML}
+                </div>
+            `;
+        });
+
+        let summaryHTML = '';
+        if (showResults) {
+            summaryHTML = `
+                <div class="quiz-results-summary">
+                    <div class="quiz-score-highlight">${score} / ${questions.length}</div>
+                    <p>Ribbit! Review the correct answers and explanations above.</p>
+                </div>
+            `;
+        } else {
+            summaryHTML = `
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-primary btn-submit-quiz" style="background: var(--color-mint); border: none; color: var(--bg-dark); font-weight: bold; padding: 8px 16px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;">Submit Quiz</button>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="quiz-widget">
+                <div class="widget-title-bar">
+                    <h4>📝 ${escapeHTML(quiz.title || 'Practice Quiz')}</h4>
+                </div>
+                ${summaryHTML}
+                <div class="quiz-questions-list">
+                    ${questionsHTML}
+                </div>
+            </div>
+        `;
+
+        if (!showResults) {
+            container.querySelectorAll('.quiz-option-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const qIdx = parseInt(btn.getAttribute('data-q'));
+                    const optIdx = parseInt(btn.getAttribute('data-opt'));
+                    userAnswers[qIdx] = optIdx;
+                    renderQuizContent(false);
+                });
+            });
+
+            container.querySelector('.btn-submit-quiz').addEventListener('click', () => {
+                const unanswered = userAnswers.filter(ans => ans === null).length;
+                if (unanswered > 0) {
+                    if (!confirm(`You have left ${unanswered} question(s) unanswered. Submit anyway?`)) {
+                        return;
+                    }
+                }
+                renderQuizContent(true);
+            });
+        }
+    };
+
+    renderQuizContent(false);
+}
+
+function renderPracticeTest(container, test) {
+    const tfQuestions = test.true_false || [];
+    const mcQuestions = test.multiple_choice || [];
+    const saQuestions = test.short_answer || [];
+
+    const tfAnswers = new Array(tfQuestions.length).fill(null);
+    const mcAnswers = new Array(mcQuestions.length).fill(null);
+    const saAnswers = new Array(saQuestions.length).fill('');
+
+    const renderTestContent = (showResults = false) => {
+        let tfHTML = '';
+        let mcHTML = '';
+        let saHTML = '';
+        let score = 0;
+        let maxScore = tfQuestions.length + mcQuestions.length;
+
+        // TF
+        if (tfQuestions.length > 0) {
+            tfHTML += `<div class="test-section-title">Section A — True or False</div>`;
+            tfQuestions.forEach((q, qIdx) => {
+                let optionsHTML = '';
+                const options = ['True', 'False'];
+                options.forEach((opt, optIdx) => {
+                    const isSelected = tfAnswers[qIdx] === opt;
+                    let optionClass = 'quiz-option-btn';
+                    if (isSelected) optionClass += ' selected';
+
+                    if (showResults) {
+                        const isCorrect = q.correct_answer.toLowerCase().trim() === opt.toLowerCase();
+                        if (isCorrect) {
+                            optionClass += ' correct-reveal';
+                            if (isSelected) score++;
+                        } else if (isSelected) {
+                            optionClass += ' wrong-reveal';
+                        }
+                    }
+
+                    optionsHTML += `
+                        <button class="${optionClass}" data-tf-q="${qIdx}" data-tf-opt="${opt}" ${showResults ? 'disabled' : ''} style="flex: 1; text-align: center;">
+                            ${opt}
+                        </button>
+                    `;
+                });
+
+                const explanationHTML = (showResults && q.explanation) ? `
+                    <div class="quiz-explanation">
+                        <strong>Explanation:</strong> ${escapeHTML(q.explanation)}
+                    </div>
+                ` : '';
+
+                tfHTML += `
+                    <div class="quiz-question-container">
+                        <div class="quiz-question-num">Question ${qIdx + 1} (${q.points || 1} pt)</div>
+                        <p class="quiz-question-text">${escapeHTML(q.statement)}</p>
+                        <div class="quiz-options-list" style="flex-direction: row; gap: 10px;">
+                            ${optionsHTML}
+                        </div>
+                        ${explanationHTML}
+                    </div>
+                `;
+            });
+        }
+
+        // MCQ
+        if (mcQuestions.length > 0) {
+            mcHTML += `<div class="test-section-title">Section B — Multiple Choice</div>`;
+            mcQuestions.forEach((q, qIdx) => {
+                let optionsHTML = '';
+                
+                let correctLetter = '';
+                if (q.correct_answer) {
+                    const match = q.correct_answer.match(/^([A-D])(?:\)| |$)/i);
+                    if (match) {
+                        correctLetter = match[1].toUpperCase();
+                    } else {
+                        correctLetter = q.correct_answer.trim().charAt(0).toUpperCase();
+                    }
+                }
+
+                q.options.forEach((opt, optIdx) => {
+                    const optionLetter = String.fromCharCode(65 + optIdx);
+                    const isSelected = mcAnswers[qIdx] === optIdx;
+                    let optionClass = 'quiz-option-btn';
+                    if (isSelected) optionClass += ' selected';
+
+                    if (showResults) {
+                        const isCorrectOption = optionLetter === correctLetter;
+                        if (isCorrectOption) {
+                            optionClass += ' correct-reveal';
+                            if (isSelected) score++;
+                        } else if (isSelected) {
+                            optionClass += ' wrong-reveal';
+                        }
+                    }
+
+                    optionsHTML += `
+                        <button class="${optionClass}" data-mc-q="${qIdx}" data-mc-opt="${optIdx}" ${showResults ? 'disabled' : ''}>
+                            <span class="option-letter" style="font-weight:bold; color:var(--color-mint);">${optionLetter}.</span> 
+                            <span>${escapeHTML(opt.replace(/^[A-D]\)?\s*/i, ''))}</span>
+                        </button>
+                    `;
+                });
+
+                const explanationHTML = (showResults && q.explanation) ? `
+                    <div class="quiz-explanation">
+                        <strong>Explanation:</strong> ${escapeHTML(q.explanation)}
+                    </div>
+                ` : '';
+
+                mcHTML += `
+                    <div class="quiz-question-container">
+                        <div class="quiz-question-num">Question ${tfQuestions.length + qIdx + 1} (${q.points || 1} pt)</div>
+                        <p class="quiz-question-text">${escapeHTML(q.question)}</p>
+                        <div class="quiz-options-list">
+                            ${optionsHTML}
+                        </div>
+                        ${explanationHTML}
+                    </div>
+                `;
+            });
+        }
+
+        // SA
+        if (saQuestions.length > 0) {
+            saHTML += `<div class="test-section-title">Section C — Short Answer</div>`;
+            saQuestions.forEach((q, qIdx) => {
+                const userVal = saAnswers[qIdx] || '';
+                const textareaHTML = showResults 
+                    ? `<div class="user-written-answer"><strong>Your Answer:</strong> ${escapeHTML(userVal || '[Left blank]')}</div>`
+                    : `<textarea class="test-textarea" data-sa-q="${qIdx}" placeholder="Type your answer here...">${escapeHTML(userVal)}</textarea>`;
+
+                const feedbackHTML = showResults ? `
+                    <div class="test-short-answer-feedback">
+                        <div class="model-sample-answer">
+                            <strong>Sample/Model Answer:</strong> ${escapeHTML(q.sample_answer)}
+                        </div>
+                        <div class="grading-guidelines">
+                            <strong>Key Points to Self-Grade:</strong> ${escapeHTML((q.key_points || []).join(', '))}
+                        </div>
+                    </div>
+                ` : '';
+
+                saHTML += `
+                    <div class="quiz-question-container">
+                        <div class="quiz-question-num">Question ${tfQuestions.length + mcQuestions.length + qIdx + 1} (${q.points || 3} pts)</div>
+                        <p class="quiz-question-text">${escapeHTML(q.question)}</p>
+                        ${textareaHTML}
+                        ${feedbackHTML}
+                    </div>
+                `;
+            });
+        }
+
+        let summaryHTML = '';
+        if (showResults) {
+            summaryHTML = `
+                <div class="quiz-results-summary">
+                    <div class="quiz-score-highlight">${score} / ${maxScore}</div>
+                    <p>Ribbit! Section A & B score calculated. Self-grade Section C using the guidelines below!</p>
+                </div>
+            `;
+        } else {
+            summaryHTML = `
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-primary btn-submit-test" style="background: var(--color-mint); border: none; color: var(--bg-dark); font-weight: bold; padding: 8px 16px; border-radius: 10px; cursor: pointer;">Submit Practice Test</button>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="quiz-widget">
+                <div class="widget-title-bar">
+                    <h4>🧪 ${escapeHTML(test.title || 'Practice Test')}</h4>
+                </div>
+                ${summaryHTML}
+                <div class="test-sections">
+                    ${tfHTML}
+                    ${mcHTML}
+                    ${saHTML}
+                </div>
+            </div>
+        `;
+
+        if (!showResults) {
+            container.querySelectorAll('[data-tf-q]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const qIdx = parseInt(btn.getAttribute('data-tf-q'));
+                    tfAnswers[qIdx] = btn.getAttribute('data-tf-opt');
+                    renderTestContent(false);
+                });
+            });
+
+            container.querySelectorAll('[data-mc-q]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const qIdx = parseInt(btn.getAttribute('data-mc-q'));
+                    mcAnswers[qIdx] = parseInt(btn.getAttribute('data-mc-opt'));
+                    renderTestContent(false);
+                });
+            });
+
+            container.querySelectorAll('[data-sa-q]').forEach(textarea => {
+                textarea.addEventListener('input', () => {
+                    const qIdx = parseInt(textarea.getAttribute('data-sa-q'));
+                    saAnswers[qIdx] = textarea.value;
+                });
+            });
+
+            container.querySelector('.btn-submit-test').addEventListener('click', () => {
+                const unansweredTF = tfAnswers.filter(ans => ans === null).length;
+                const unansweredMC = mcAnswers.filter(ans => ans === null).length;
+                const unansweredSA = saAnswers.filter(ans => ans.trim() === '').length;
+                const totalUnanswered = unansweredTF + unansweredMC + unansweredSA;
+
+                if (totalUnanswered > 0) {
+                    if (!confirm(`You have left ${totalUnanswered} question(s) unanswered. Submit anyway?`)) {
+                        return;
+                    }
+                }
+                renderTestContent(true);
+            });
+        }
+    };
+
+    renderTestContent(false);
+}
+
+// --- Flashcards Library Modal Handlers (Unified Split-screen tab) ---
+function openFlashcardsLibraryModal() {
+    openFrogGPTModal();
+    showLibraryInPanel();
+}
+
+function closeFlashcardsLibraryModal() {
+    closeFrogGPTModal();
+}
+
+function loadWidgetFromWindow(key, type) {
+    const data = window[key];
+    if (data) {
+        renderInteractiveWidget('froggpt-study-content', type, data);
+    }
+}
+
+function showLibraryInPanel() {
+    const container = document.getElementById('froggpt-study-content');
+    if (!container) return;
+
+    let savedDecks = [];
+    try {
+        savedDecks = JSON.parse(localStorage.getItem('saved_flashcard_decks')) || [];
+    } catch (e) {
+        savedDecks = [];
+    }
+
+    if (savedDecks.length === 0) {
+        container.innerHTML = `
+            <div class="study-placeholder">
+                <div class="placeholder-mascot">📇</div>
+                <h3>My Flashcards Library</h3>
+                <p>No saved flashcard decks yet! Ask frogGPT to generate some flashcards for you, then click "Save to Library".</p>
+                <button class="btn btn-secondary btn-sm" onclick="showStudyPanelPlaceholder()" style="margin-top: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color:#fff; padding: 6px 12px; border-radius:8px; cursor:pointer;">Back</button>
+            </div>
+        `;
+    } else {
+        const listHTML = savedDecks.map((deck) => `
+            <div class="flashcard-library-item">
+                <div class="deck-info">
+                    <h4>${escapeHTML(deck.title)}</h4>
+                    <p>${deck.cards.length} Cards • Saved on ${new Date(deck.timestamp).toLocaleDateString()}</p>
+                </div>
+                <div class="deck-actions">
+                    <button class="btn btn-primary btn-sm" onclick="playFlashcardDeckInPanel('${deck.id}')" style="background: var(--color-mint); border: none; color: var(--bg-dark); font-weight: bold; padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;">Study</button>
+                    <button class="btn btn-secondary btn-sm" onclick="deleteFlashcardDeckInPanel('${deck.id}')" style="background: rgba(200, 70, 70, 0.15); border: 1px solid rgba(200, 70, 70, 0.3); color: #f7a3a3; padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;">Delete</button>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="flashcards-library-container" style="display:flex; flex-direction:column; gap:16px;">
+                <div class="player-header">
+                    <h3>📂 My Flashcards Library</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="showStudyPanelPlaceholder()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color:#fff; padding: 6px 12px; border-radius:8px; cursor:pointer;">Close Library</button>
+                </div>
+                <div class="flashcards-library-list">
+                    ${listHTML}
+                </div>
+            </div>
+        `;
+    }
+}
+
+function playFlashcardDeckInPanel(deckId) {
+    let savedDecks = [];
+    try {
+        savedDecks = JSON.parse(localStorage.getItem('saved_flashcard_decks')) || [];
+    } catch (e) {
+        savedDecks = [];
+    }
+
+    const deck = savedDecks.find(d => d.id === deckId);
+    if (!deck) return;
+
+    const container = document.getElementById('froggpt-study-content');
+    if (container) {
+        container.innerHTML = `
+            <div class="flashcards-player-container">
+                <div class="player-header">
+                    <h3 id="player-deck-title">${escapeHTML(deck.title)}</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="showLibraryInPanel()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color:#fff; padding: 6px 12px; border-radius:8px; cursor:pointer;">Back to Library</button>
+                </div>
+                <div id="panel-card-area"></div>
+            </div>
+        `;
+        renderFlashcards(document.getElementById('panel-card-area'), deck, true, deckId);
+    }
+}
+
+function deleteFlashcardDeckInPanel(deckId) {
+    if (!confirm('Are you sure you want to delete this deck from your library?')) {
+        return;
+    }
+
+    let savedDecks = [];
+    try {
+        savedDecks = JSON.parse(localStorage.getItem('saved_flashcard_decks')) || [];
+    } catch (e) {
+        savedDecks = [];
+    }
+
+    savedDecks = savedDecks.filter(d => d.id !== deckId);
+    localStorage.setItem('saved_flashcard_decks', JSON.stringify(savedDecks));
+    showLibraryInPanel();
+}
+
+function showStudyPanelPlaceholder() {
+    const container = document.getElementById('froggpt-study-content');
+    if (!container) return;
+    container.innerHTML = `
+        <div class="study-placeholder">
+            <div class="placeholder-mascot">📚🐸</div>
+            <h3>Interactive Study Dashboard</h3>
+            <p>Ask frogGPT to generate <strong>flashcards</strong>, a <strong>quiz</strong>, or a <strong>practice test</strong>, and they will load here interactively.</p>
+            <button class="btn btn-primary" onclick="showLibraryInPanel()" style="margin-top: 15px; background: var(--color-sage); border-color: var(--panel-border); font-size: 0.85rem; padding: 6px 14px; border-radius: 8px; cursor:pointer; color: #fff;">📂 Open Flashcards Library</button>
+        </div>
+    `;
+}
+
+// --- Document Import Handlers ---
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds the 5MB limit. Please upload a smaller notes file.');
+        event.target.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const badge = document.getElementById('froggpt-import-badge');
+    const badgeText = document.getElementById('froggpt-import-badge-text');
+
+    try {
+        // Show indicator that loading notes is in progress
+        if (badgeText) badgeText.innerText = `📎 Loading ${file.name}...`;
+        if (badge) badge.classList.remove('hidden');
+
+        const response = await fetch('/api/froggpt/import', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            importedDocumentText = data.content || '';
+            importedDocumentName = data.filename || '';
+            
+            if (badgeText) badgeText.innerText = `📎 Notes Imported: ${escapeHTML(importedDocumentName)} (${data.char_count} chars)`;
+            playRibbit();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            alert(`Failed to import document: ${err.error || 'Server error'}`);
+            clearImportedDocument();
+        }
+    } catch (e) {
+        console.error('File upload error:', e);
+        alert('An error occurred during file upload. Check your server connection.');
+        clearImportedDocument();
+    } finally {
+        event.target.value = ''; // clear input
+    }
+}
+
+function clearImportedDocument() {
+    importedDocumentText = '';
+    importedDocumentName = '';
+    const badge = document.getElementById('froggpt-import-badge');
+    if (badge) badge.classList.add('hidden');
+    const fileInput = document.getElementById('froggpt-file-upload');
+    if (fileInput) fileInput.value = '';
+}
+
+window.openFrogGPTModal = openFrogGPTModal;
+window.closeFrogGPTModal = closeFrogGPTModal;
+window.handleQuickPrompt = handleQuickPrompt;
+window.handleFrogGPTSubmit = handleFrogGPTSubmit;
+window.openFlashcardsLibraryModal = openFlashcardsLibraryModal;
+window.closeFlashcardsLibraryModal = closeFlashcardsLibraryModal;
+window.loadWidgetFromWindow = loadWidgetFromWindow;
+window.showLibraryInPanel = showLibraryInPanel;
+window.showStudyPanelPlaceholder = showStudyPanelPlaceholder;
+window.playFlashcardDeckInPanel = playFlashcardDeckInPanel;
+window.deleteFlashcardDeckInPanel = deleteFlashcardDeckInPanel;
+window.handleFileUpload = handleFileUpload;
+window.clearImportedDocument = clearImportedDocument;

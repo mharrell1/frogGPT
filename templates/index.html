@@ -38,6 +38,12 @@
             <button id="btn-sidebar-games" class="btn-sidebar-item" onclick="openGamesModal()" title="Play Mini Games">
                 <span>🎮</span>
             </button>
+            <button id="btn-sidebar-froggpt" class="btn-sidebar-item" onclick="openFrogGPTModal()" title="frogGPT AI Study Agent">
+                <span>🤖</span>
+            </button>
+            <button id="btn-sidebar-flashcards" class="btn-sidebar-item" onclick="openFlashcardsLibraryModal()" title="Flashcards Library">
+                <span>📇</span>
+            </button>
         </div>
         <div class="sidebar-bottom">
             <span class="sidebar-mascot">🐸</span>
@@ -248,7 +254,7 @@
                             <span class="playlist-icon">🎹</span>
                             <div class="playlist-meta">
                                 <span class="playlist-name">Peaceful Piano</span>
-                                <span class="playlist-desc">Beautiful classical & modern piano</span>
+                                <span class="playlist-desc">Beautiful classical & piano</span>
                             </div>
                         </button>
                         <button class="playlist-btn" data-spotify-uri="embed/playlist/37i9dQZF1DX4PP3DA4J0N8" onclick="playCurated(this)">
@@ -258,7 +264,7 @@
                                 <span class="playlist-desc">Relaxing storm & forest noise</span>
                             </div>
                         </button>
-                        <button class="playlist-btn" data-spotify-uri="embed/playlist/36uOCbfQgecYtsiB7Ymvlv" onclick="playCurated(this)">
+                        <button class="playlist-btn" data-spotify-uri="embed/playlist/1mPtaJ1MyXfdQPTKImSJiL" onclick="playCurated(this)">
                             <span class="playlist-icon">🕹️</span>
                             <div class="playlist-meta">
                                 <span class="playlist-name">Nintendo & Chill</span>
@@ -268,11 +274,12 @@
                     </div>
                 </div>
 
-                <div class="spotify-iframe-container">
+                <div class="spotify-iframe-container" id="player-container">
+                    <!-- Spotify Embed Player -->
                     <iframe id="spotify-player" 
                             src="https://open.spotify.com/embed/playlist/0vvXsWCC9xrXsKd4FyS8kM?utm_source=generator&theme=0" 
                             width="100%" 
-                            height="152" 
+                            height="100%" 
                             frameBorder="0" 
                             allowfullscreen="" 
                             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
@@ -452,6 +459,92 @@
         </div>
     </div>
 
+    <!-- frogGPT AI Study Agent Modal Overlay -->
+    <div id="froggpt-modal" class="modal-overlay" onclick="if(event.target === this) closeFrogGPTModal()">
+        <div class="modal-content glass-panel froggpt-modal-content">
+            <div class="modal-header">
+                <div class="froggpt-header-title">
+                    <span class="froggpt-header-icon">🤖</span>
+                    <h2>frogGPT <span class="badge-ai">AI Study Agent</span></h2>
+                </div>
+                <button class="btn-close" onclick="closeFrogGPTModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body froggpt-modal-body split-layout">
+                <!-- Left Column: Chat Area -->
+                <div class="froggpt-chat-column">
+                    <div class="froggpt-intro">
+                        <p>Lily is powered by Google Gemini! Ask her to explain concepts, make flashcards, generate practice tests or quizzes, and export study guides to your Documents folder.</p>
+                        <div class="model-select-wrapper">
+                            <label for="froggpt-model-select">🤖 Study Model:</label>
+                            <select id="froggpt-model-select" class="froggpt-model-select">
+                                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Fast, Default)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Powerful, Complex tasks)</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy Fast)</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy Complex)</option>
+                                <option value="gpt-4o">ChatGPT (GPT-4o)</option>
+                                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Prompt Suggestion Pills -->
+                    <div class="froggpt-suggestions">
+                        <button class="btn-suggestion-pill" onclick="handleQuickPrompt('🧬 Explain Photosynthesis and give me a fun analogy')">🧬 Explain Photosynthesis</button>
+                        <button class="btn-suggestion-pill" onclick="handleQuickPrompt('📇 Generate 5 flashcards for Mitosis vs Meiosis')">📇 Mitosis Flashcards</button>
+                        <button class="btn-suggestion-pill" onclick="handleQuickPrompt('📝 Quiz me on Python loops and functions')">📝 Python Quiz</button>
+                        <button class="btn-suggestion-pill" onclick="handleQuickPrompt('📚 Create a study guide for the American Civil War')">📚 Study Guide</button>
+                    </div>
+
+                    <!-- Chat Log Area -->
+                    <div id="froggpt-chat-log" class="froggpt-chat-log">
+                        <div class="chat-message ai-message">
+                            <div class="chat-avatar">🐸</div>
+                            <div class="chat-bubble">
+                                <p>Ribbit! I'm <strong>frogGPT</strong>, your AI study buddy. Type a concept or study topic below, or click one of the suggestions above to begin!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <form id="froggpt-form" onsubmit="handleFrogGPTSubmit(event)">
+                        <!-- Imported file indicator -->
+                        <div id="froggpt-import-badge" class="import-badge hidden" style="margin-bottom: 8px;">
+                            <span class="badge-text" id="froggpt-import-badge-text">📎 Imported: Notes.docx</span>
+                            <button type="button" class="btn-clear-import" onclick="clearImportedDocument()">&times;</button>
+                        </div>
+                        <div class="froggpt-input-wrapper">
+                            <!-- File upload button trigger -->
+                            <label for="froggpt-file-upload" class="btn-import-doc" title="Import notes or document (.txt, .md, .docx, .pdf)">
+                                <span>📎</span>
+                            </label>
+                            <input type="file" id="froggpt-file-upload" style="display:none;" accept=".txt,.md,.docx,.pdf" onchange="handleFileUpload(event)">
+                            
+                            <input type="text" id="froggpt-input" placeholder="Ask frogGPT to study, explain, quiz, or make flashcards..." autocomplete="off" required>
+                            <button type="submit" class="btn btn-froggpt-send" id="btn-froggpt-send" title="Send to frogGPT">
+                                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right Column: Interactive Study Panel -->
+                <div class="froggpt-study-column">
+                    <div id="froggpt-study-content" class="froggpt-study-content">
+                        <div class="study-placeholder">
+                            <div class="placeholder-mascot">📚🐸</div>
+                            <h3>Interactive Study Dashboard</h3>
+                            <p>Ask frogGPT to generate <strong>flashcards</strong>, a <strong>quiz</strong>, or a <strong>practice test</strong>, and they will load here interactively.</p>
+                            <button class="btn btn-primary" onclick="showLibraryInPanel()" style="margin-top: 15px; background: var(--color-sage); border-color: var(--panel-border); font-size: 0.85rem; padding: 6px 14px; border-radius: 8px; cursor: pointer; color: #fff;">📂 Open Flashcards Library</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marked.js CDN for Markdown Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
