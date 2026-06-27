@@ -1488,6 +1488,10 @@ function openFrogGPTModal() {
         modal.classList.add('open');
         const sidebarBtn = document.getElementById('btn-sidebar-froggpt');
         if (sidebarBtn) sidebarBtn.classList.add('active');
+        
+        // Update quota counter UI
+        updateQueryCounterUI();
+
         // Set focus on input
         setTimeout(() => {
             const input = document.getElementById('froggpt-input');
@@ -1527,6 +1531,37 @@ async function sendFrogGPTMessage(messageText) {
     const chatLog = document.getElementById('froggpt-chat-log');
     const sendBtn = document.getElementById('btn-froggpt-send');
     if (!chatLog) return;
+
+    // Check quota limit first
+    const quotaData = getQueryCountForToday();
+    if (quotaData.count >= 50) {
+        if (input) input.value = '';
+        
+        // Append user message
+        const userMsgElem = document.createElement('div');
+        userMsgElem.className = 'chat-message user-message';
+        userMsgElem.innerHTML = `
+            <div class="chat-avatar">👤</div>
+            <div class="chat-bubble">
+                <p>${escapeHTML(messageText)}</p>
+            </div>
+        `;
+        chatLog.appendChild(userMsgElem);
+        
+        // Append warning message
+        const aiMsgElem = document.createElement('div');
+        aiMsgElem.className = 'chat-message ai-message';
+        aiMsgElem.innerHTML = `
+            <div class="chat-avatar">🐸</div>
+            <div class="chat-bubble">
+                <p>⚠️ **Daily Free Quota Reached (50/50)**</p>
+                <p>Ribbit! You have reached your daily free tier limit of 50 queries. Please wait until tomorrow for the counter to reset, or run the app locally with your own API key to continue studying!</p>
+            </div>
+        `;
+        chatLog.appendChild(aiMsgElem);
+        chatLog.scrollTop = chatLog.scrollHeight;
+        return;
+    }
 
     if (input) input.value = '';
 
@@ -1578,6 +1613,7 @@ async function sendFrogGPTMessage(messageText) {
         }
 
         if (response.ok) {
+            incrementQueryCount();
             const data = await response.json();
             if (data.session_id) {
                 frogGPTSessionId = data.session_id;
@@ -2435,6 +2471,43 @@ function clearImportedDocument() {
     if (fileInput) fileInput.value = '';
 }
 
+// --- Quota & Query Counter Handlers ---
+function getQueryCountForToday() {
+    const todayStr = new Date().toDateString();
+    let quotaData = { date: todayStr, count: 0 };
+    try {
+        const stored = JSON.parse(localStorage.getItem('froggpt_query_quota'));
+        if (stored && stored.date === todayStr) {
+            quotaData = stored;
+        }
+    } catch (e) {
+        console.error(e);
+    }
+    return quotaData;
+}
+
+function incrementQueryCount() {
+    const quotaData = getQueryCountForToday();
+    quotaData.count += 1;
+    localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
+    updateQueryCounterUI();
+}
+
+function updateQueryCounterUI() {
+    const quotaData = getQueryCountForToday();
+    const counterElem = document.getElementById('froggpt-query-counter');
+    if (counterElem) {
+        counterElem.innerText = `${quotaData.count} / 50`;
+        if (quotaData.count >= 50) {
+            counterElem.style.color = '#ff595e';
+            counterElem.style.background = 'rgba(255, 89, 94, 0.1)';
+        } else {
+            counterElem.style.color = 'var(--color-mint)';
+            counterElem.style.background = 'rgba(135, 195, 143, 0.1)';
+        }
+    }
+}
+
 window.openFrogGPTModal = openFrogGPTModal;
 window.closeFrogGPTModal = closeFrogGPTModal;
 window.handleQuickPrompt = handleQuickPrompt;
@@ -2448,3 +2521,6 @@ window.playFlashcardDeckInPanel = playFlashcardDeckInPanel;
 window.deleteFlashcardDeckInPanel = deleteFlashcardDeckInPanel;
 window.handleFileUpload = handleFileUpload;
 window.clearImportedDocument = clearImportedDocument;
+window.getQueryCountForToday = getQueryCountForToday;
+window.incrementQueryCount = incrementQueryCount;
+window.updateQueryCounterUI = updateQueryCounterUI;
