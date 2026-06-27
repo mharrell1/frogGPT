@@ -462,15 +462,23 @@
     <!-- frogGPT AI Study Agent Modal Overlay -->
     <div id="froggpt-modal" class="modal-overlay" onclick="if(event.target === this) closeFrogGPTModal()">
         <div class="modal-content glass-panel froggpt-modal-content">
-            <div class="modal-header">
+            <div class="modal-header" style="flex-wrap: wrap; gap: 15px;">
                 <div class="froggpt-header-title">
                     <span class="froggpt-header-icon">🤖</span>
                     <h2>frogGPT <span class="badge-ai">AI Study Agent</span></h2>
                 </div>
+                
+                <!-- Tab Switcher Navigation (Three-way toggle) -->
+                <div class="froggpt-tabs" style="display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; border: 1px solid var(--panel-border);">
+                    <button id="tab-froggpt-chat" class="tab-btn active" onclick="switchFrogGPTTab('chat')" style="background: var(--color-emerald); border: none; color: #fff; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem; transition: all 0.2s;">💬 Chat Only</button>
+                    <button id="tab-froggpt-materials" class="tab-btn" onclick="switchFrogGPTTab('materials')" style="background: none; border: none; color: var(--color-text-dim); padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem; transition: all 0.2s;">📚 Materials Only</button>
+                    <button id="tab-froggpt-split" class="tab-btn" onclick="switchFrogGPTTab('split')" style="background: none; border: none; color: var(--color-text-dim); padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem; transition: all 0.2s;">🔀 Split Screen</button>
+                </div>
+
                 <button class="btn-close" onclick="closeFrogGPTModal()">&times;</button>
             </div>
             
-            <div class="modal-body froggpt-modal-body split-layout">
+            <div class="modal-body froggpt-modal-body split-layout tab-chat">
                 <!-- Left Column: Chat Area -->
                 <div class="froggpt-chat-column">
                     <div class="froggpt-intro">

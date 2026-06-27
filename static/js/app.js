@@ -1489,6 +1489,9 @@ function openFrogGPTModal() {
         const sidebarBtn = document.getElementById('btn-sidebar-froggpt');
         if (sidebarBtn) sidebarBtn.classList.add('active');
         
+        // Default to study chat tab
+        switchFrogGPTTab('chat');
+
         // Update quota counter UI
         updateQueryCounterUI();
 
@@ -1497,6 +1500,35 @@ function openFrogGPTModal() {
             const input = document.getElementById('froggpt-input');
             if (input) input.focus();
         }, 100);
+    }
+}
+
+function switchFrogGPTTab(tabName) {
+    const body = document.querySelector('.froggpt-modal-body');
+    const chatTabBtn = document.getElementById('tab-froggpt-chat');
+    const materialsTabBtn = document.getElementById('tab-froggpt-materials');
+    const splitTabBtn = document.getElementById('tab-froggpt-split');
+    
+    if (!body) return;
+
+    // Reset all tabs
+    body.classList.remove('tab-chat', 'tab-materials', 'tab-split');
+    [chatTabBtn, materialsTabBtn, splitTabBtn].forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.background = 'none';
+            btn.style.color = 'var(--color-text-dim)';
+        }
+    });
+
+    // Set active tab class
+    body.classList.add(`tab-${tabName}`);
+
+    const activeBtn = document.getElementById(`tab-froggpt-${tabName}`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.background = 'var(--color-emerald)';
+        activeBtn.style.color = '#fff';
     }
 }
 
@@ -1653,6 +1685,7 @@ async function sendFrogGPTMessage(messageText) {
             chatLog.appendChild(aiMsgElem);
             
             if (data.structured_data && data.subagent_author) {
+                switchFrogGPTTab('materials');
                 renderInteractiveWidget('froggpt-study-content', data.subagent_author, data.structured_data);
             }
 
@@ -2295,6 +2328,7 @@ function renderPracticeTest(container, test) {
 // --- Flashcards Library Modal Handlers (Unified Split-screen tab) ---
 function openFlashcardsLibraryModal() {
     openFrogGPTModal();
+    switchFrogGPTTab('materials');
     showLibraryInPanel();
 }
 
@@ -2305,6 +2339,7 @@ function closeFlashcardsLibraryModal() {
 function loadWidgetFromWindow(key, type) {
     const data = window[key];
     if (data) {
+        switchFrogGPTTab('materials');
         renderInteractiveWidget('froggpt-study-content', type, data);
     }
 }
@@ -2524,3 +2559,4 @@ window.clearImportedDocument = clearImportedDocument;
 window.getQueryCountForToday = getQueryCountForToday;
 window.incrementQueryCount = incrementQueryCount;
 window.updateQueryCounterUI = updateQueryCounterUI;
+window.switchFrogGPTTab = switchFrogGPTTab;

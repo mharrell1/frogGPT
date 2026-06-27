@@ -2924,3 +2924,31 @@ input[type=number] {
         height: 90vh;
     }
 }
+
+/* Tab Switching visibility overrides (Three-way toggle) */
+.froggpt-modal-body.tab-chat .froggpt-chat-column {
+    display: flex !important;
+    flex: 1 !important;
+    width: 100% !important;
+}
+.froggpt-modal-body.tab-chat .froggpt-study-column {
+    display: none !important;
+}
+
+.froggpt-modal-body.tab-materials .froggpt-chat-column {
+    display: none !important;
+}
+.froggpt-modal-body.tab-materials .froggpt-study-column {
+    display: flex !important;
+    flex: 1 !important;
+    width: 100% !important;
+}
+
+.froggpt-modal-body.tab-split .froggpt-chat-column {
+    display: flex !important;
+    flex: 4.5 !important;
+}
+.froggpt-modal-body.tab-split .froggpt-study-column {
+    display: flex !important;
+    flex: 5.5 !important;
+}
