@@ -528,5 +528,109 @@ def froggpt_chat():
             return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id})
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/froggpt/history', methods=['GET'])
+def froggpt_list_history():
+    user_id = session.get('username')
+    if not user_id:
+        return jsonify({'error': 'You must be logged in to access history.'}), 401
+
+    if not froggpt_session_service:
+        return jsonify({'error': 'Session service not initialized'}), 500
+
+    try:
+        resp = froggpt_session_service.list_sessions_sync(app_name="frogGPT", user_id=user_id)
+        sessions_list = []
+        if resp and resp.sessions:
+            for s in resp.sessions:
+                # Format update time
+                import datetime
+                dt_str = "Unknown date"
+                if getattr(s, 'last_update_time', None):
+                    try:
+                        dt_str = datetime.datetime.fromtimestamp(s.last_update_time).strftime("%b %d, %Y %I:%M %p")
+                    except Exception:
+                        pass
+                
+                # Fetch full session once to extract the first message as summary
+                first_msg = "New Study Session"
+                try:
+                    full_sess = froggpt_session_service.get_session_sync(user_id=user_id, session_id=s.id, app_name="frogGPT")
+                    if full_sess and full_sess.events:
+                        for ev in full_sess.events:
+                            if ev.author == 'user' and ev.content and ev.content.parts:
+                                txt = "".join([p.text for p in ev.content.parts if getattr(p, 'text', None)]).strip()
+                                if txt:
+                                    first_msg = txt[:45] + ("..." if len(txt) > 45 else "")
+                                    break
+                except Exception:
+                    pass
+
+                sessions_list.append({
+                    'id': s.id,
+                    'updated_at': dt_str,
+                    'summary': first_msg
+                })
+        # Sort in reverse chronological order
+        sessions_list.reverse()
+        return jsonify({'success': True, 'sessions': sessions_list})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/froggpt/history/<session_id>', methods=['GET'])
+def froggpt_session_history(session_id):
+    user_id = session.get('username')
+    if not user_id:
+        return jsonify({'error': 'You must be logged in to access history.'}), 401
+    
+    if not froggpt_session_service:
+        return jsonify({'error': 'Session service not initialized'}), 500
+        
+    try:
+        sess = froggpt_session_service.get_session_sync(user_id=user_id, session_id=session_id, app_name="frogGPT")
+        if not sess:
+            return jsonify({'error': 'Session not found'}), 404
+            
+        history = []
+        if sess.events:
+            for ev in sess.events:
+                text = ""
+                if ev.content and ev.content.parts:
+                    text = "".join([p.text for p in ev.content.parts if getattr(p, 'text', None)])
+                
+                # Check for structured JSON blocks
+                import re
+                import json
+                structured_data = None
+                subagent_author = None
+                
+                json_match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+                if json_match:
+                    try:
+                        structured_data = json.loads(json_match.group(1).strip())
+                        if 'cards' in structured_data:
+                            subagent_author = 'flashcard_agent'
+                        elif 'difficulty' in structured_data or ('questions' in structured_data and 'options' in str(structured_data)):
+                            subagent_author = 'quiz_agent'
+                        elif 'true_false' in structured_data or 'multiple_choice' in structured_data:
+                            subagent_author = 'test_agent'
+                        elif 'sections' in structured_data:
+                            subagent_author = 'study_guide_agent'
+                            
+                        # Keep the text clean without the raw json match
+                        text = text.replace(json_match.group(0), "").strip()
+                    except Exception:
+                        pass
+
+                history.append({
+                    'author': ev.author,
+                    'text': text,
+                    'structured_data': structured_data,
+                    'subagent_author': subagent_author,
+                    'timestamp': getattr(ev, 'timestamp', None)
+                })
+        return jsonify({'success': True, 'events': history})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

@@ -55,6 +55,9 @@ Welcome to **Froggy Pomodoro**, a cozy and aesthetic productivity web applicatio
   * **💬 Chat Only:** Focuses exclusively on your conversation with Lily for instruction and query inputs (100% width).
   * **📚 Materials Only:** Expands the interactive study playground (flashcards, quizzes, tests, study guides) to full-screen width for distraction-free learning.
   * **🔀 Split Screen:** Displays both the chat window and interactive materials side-by-side.
+* **Persistent Session History:**
+  * If logged in, users can click **"📜 Session History"** to list, load, and resume past study conversations.
+  * Users can click **"➕ New Chat"** to clear the conversation log and spin up a clean study session.
 * **Interactive Study Playgrounds:**
   * **Interactive Flashcards:** View cards, click to flip with a 3D perspective transition, star cards (`☆`/`★`) to bookmark, and shuffle decks using a Fisher-Yates generator.
   * **Interactive Quizzes:** Answer multiple-choice questions with color-coded feedback and view final scores.

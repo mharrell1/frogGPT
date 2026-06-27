@@ -2615,6 +2615,169 @@ function startQuotaCountdown() {
     quotaResetInterval = setInterval(updateCountdown, 1000);
 }
 
+async function toggleFrogGPTHistoryList() {
+    const listOverlay = document.getElementById('froggpt-history-list');
+    if (!listOverlay) return;
+
+    if (!listOverlay.classList.contains('hidden')) {
+        listOverlay.classList.add('hidden');
+        return;
+    }
+
+    const itemsContainer = document.getElementById('froggpt-history-items');
+    if (itemsContainer) {
+        itemsContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--color-text-dim); text-align:center; padding: 10px;">Loading sessions...</div>';
+    }
+
+    listOverlay.classList.remove('hidden');
+
+    try {
+        const res = await fetch('/api/froggpt/history');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.sessions && data.sessions.length > 0) {
+                itemsContainer.innerHTML = '';
+                data.sessions.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = 'history-item-btn';
+                    btn.style.width = '100%';
+                    btn.style.background = 'rgba(255,255,255,0.03)';
+                    btn.style.border = '1px solid rgba(255,255,255,0.08)';
+                    btn.style.borderRadius = '8px';
+                    btn.style.color = '#fff';
+                    btn.style.padding = '8px';
+                    btn.style.textAlign = 'left';
+                    btn.style.cursor = 'pointer';
+                    btn.style.fontSize = '0.78rem';
+                    btn.style.transition = 'all 0.2s';
+                    
+                    btn.innerHTML = `
+                        <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-mint);">${escapeHTML(s.summary)}</div>
+                        <div style="font-size: 0.68rem; color: var(--color-text-dim); margin-top: 2px;">${s.updated_at}</div>
+                    `;
+                    
+                    btn.onmouseover = () => {
+                        btn.style.background = 'rgba(135,195,143,0.1)';
+                        btn.style.borderColor = 'var(--color-mint)';
+                    };
+                    btn.onmouseout = () => {
+                        btn.style.background = 'rgba(255,255,255,0.03)';
+                        btn.style.borderColor = 'rgba(255,255,255,0.08)';
+                    };
+                    
+                    btn.onclick = () => {
+                        loadFrogGPTSession(s.id);
+                    };
+                    itemsContainer.appendChild(btn);
+                });
+            } else {
+                itemsContainer.innerHTML = '<div style="font-size:0.75rem; color:var(--color-text-dim); text-align:center; padding: 10px;">No past sessions found.</div>';
+            }
+        } else {
+            itemsContainer.innerHTML = '<div style="font-size:0.75rem; color:#ff595e; text-align:center; padding: 10px;">Failed to load history.</div>';
+        }
+    } catch (e) {
+        console.error(e);
+        itemsContainer.innerHTML = '<div style="font-size:0.75rem; color:#ff595e; text-align:center; padding: 10px;">Error loading history.</div>';
+    }
+}
+
+function startNewFrogGPTSession() {
+    frogGPTSessionId = null;
+    const chatLog = document.getElementById('froggpt-chat-log');
+    if (chatLog) {
+        chatLog.innerHTML = `
+            <div class="chat-message ai-message">
+                <div class="chat-avatar">🐸</div>
+                <div class="chat-bubble">
+                    <p>Ribbit! Ready to start a brand new study session. Ask me anything, or import document notes using the paperclip button!</p>
+                </div>
+            </div>
+        `;
+    }
+    const listOverlay = document.getElementById('froggpt-history-list');
+    if (listOverlay) listOverlay.classList.add('hidden');
+    showStudyPanelPlaceholder();
+}
+
+async function loadFrogGPTSession(sessionId) {
+    const listOverlay = document.getElementById('froggpt-history-list');
+    if (listOverlay) listOverlay.classList.add('hidden');
+
+    const chatLog = document.getElementById('froggpt-chat-log');
+    if (chatLog) {
+        chatLog.innerHTML = '<div style="font-size:0.85rem; color:var(--color-text-dim); text-align:center; padding: 20px;">🐸 Lily is retrieving your session details...</div>';
+    }
+
+    try {
+        const res = await fetch(`/api/froggpt/history/${sessionId}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.events) {
+                frogGPTSessionId = sessionId;
+                chatLog.innerHTML = '';
+                
+                if (data.events.length === 0) {
+                    startNewFrogGPTSession();
+                    return;
+                }
+
+                data.events.forEach(ev => {
+                    const msgElem = document.createElement('div');
+                    if (ev.author === 'user') {
+                        msgElem.className = 'chat-message user-message';
+                        msgElem.innerHTML = `
+                            <div class="chat-avatar">👤</div>
+                            <div class="chat-bubble">
+                                <p>${escapeHTML(ev.text)}</p>
+                            </div>
+                        `;
+                    } else {
+                        msgElem.className = 'chat-message ai-message';
+                        
+                        let formattedHTML = '';
+                        if (typeof marked !== 'undefined') {
+                            formattedHTML = marked.parse(ev.text || '');
+                        } else {
+                            formattedHTML = `<p>${escapeHTML(ev.text || '')}</p>`;
+                        }
+
+                        let actionBtnHTML = '';
+                        if (ev.structured_data && ev.subagent_author) {
+                            const deckJsonId = `deck-data-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                            window[deckJsonId] = ev.structured_data;
+                            actionBtnHTML = `
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-primary btn-sm" onclick="loadWidgetFromWindow('${deckJsonId}', '${ev.subagent_author}')" style="background: var(--color-mint); border: none; color: var(--bg-dark); font-weight: bold; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                                        🎯 Open in Study Panel
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        msgElem.innerHTML = `
+                            <div class="chat-avatar">🐸</div>
+                            <div class="chat-bubble">
+                                ${formattedHTML}
+                                ${actionBtnHTML}
+                            </div>
+                        `;
+                    }
+                    chatLog.appendChild(msgElem);
+                });
+                chatLog.scrollTop = chatLog.scrollHeight;
+            } else {
+                alert('Could not retrieve conversation history.');
+            }
+        } else {
+            alert('Failed to retrieve history from backend.');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error fetching session history.');
+    }
+}
+
 window.openFrogGPTModal = openFrogGPTModal;
 window.closeFrogGPTModal = closeFrogGPTModal;
 window.handleQuickPrompt = handleQuickPrompt;
@@ -2632,3 +2795,6 @@ window.getQueryCountForToday = getQueryCountForToday;
 window.incrementQueryCount = incrementQueryCount;
 window.updateQueryCounterUI = updateQueryCounterUI;
 window.switchFrogGPTTab = switchFrogGPTTab;
+window.toggleFrogGPTHistoryList = toggleFrogGPTHistoryList;
+window.startNewFrogGPTSession = startNewFrogGPTSession;
+window.loadFrogGPTSession = loadFrogGPTSession;
