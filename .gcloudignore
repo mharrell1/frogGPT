@@ -1,0 +1,14 @@
+# gcloud ignore file
+.gcloudignore
+.git
+.gitignore
+.DS_Store
+
+# Ignore local database and chrome profiles
+tasks.db
+chrome_profile/
+agents/
+.agents/
+walkthrough.md
+task.md
+implementation_plan.md
