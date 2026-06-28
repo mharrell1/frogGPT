@@ -1190,6 +1190,7 @@ input[type=number] {
 
 .spotify-url-input input {
     flex: 1;
+    min-width: 0;
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--panel-border);
     border-radius: 12px;
@@ -1205,6 +1206,7 @@ input[type=number] {
 }
 
 .spotify-url-input button {
+    flex-shrink: 0;
     white-space: nowrap;
     padding: 0 16px;
     border-radius: 12px;
@@ -3684,6 +3686,37 @@ input[type=number] {
         height: 100% !important;
         max-height: none !important;
         flex: 1 !important;
+    }
+    
+    /* Mascot active dashboard shrink for small screens */
+    .mascot-card {
+        padding: 12px !important;
+        gap: 12px !important;
+    }
+    .mascot-img-container {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    .speech-bubble {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+    .stat-val {
+        font-size: 1.3rem !important;
+    }
+    .stat-lbl {
+        font-size: 0.65rem !important;
+        letter-spacing: 0px !important;
+    }
+    
+    /* Spotify input padding reduction on small screens */
+    .spotify-url-input input {
+        padding: 8px 10px !important;
+        font-size: 0.8rem !important;
+    }
+    .spotify-url-input button {
+        padding: 0 12px !important;
+        font-size: 0.8rem !important;
     }
 }
 
