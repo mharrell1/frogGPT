@@ -819,5 +819,73 @@ def notes_download():
         
     return send_file(file_path, as_attachment=True, download_name=file_name)
 
+@app.route('/api/notes/import-link', methods=['POST'])
+def import_video_link():
+    if not genai_client:
+        return jsonify({'error': 'Gemini API client not initialized. Ensure GEMINI_API_KEY is configured.'}), 500
+
+    data = request.get_json() or {}
+    url = data.get('url', '').strip()
+
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+
+    try:
+        import tempfile
+        import requests
+        import time
+
+        is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
+
+        if is_youtube:
+            prompt = (
+                f"You are a transcription assistant. Please summarize or provide a detailed transcript/outline "
+                f"of the dialogue and content of the YouTube video at this URL: {url}"
+            )
+            response = genai_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            transcript = response.text or "Could not retrieve transcript from video."
+            return jsonify({'success': True, 'transcript': transcript})
+        
+        else:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            r = requests.get(url, headers=headers, stream=True, timeout=30)
+            r.raise_for_status()
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        temp_file.write(chunk)
+                temp_path = temp_file.name
+
+            try:
+                media_file = genai_client.files.upload(file=temp_path)
+                
+                while media_file.state.name == "PROCESSING":
+                    time.sleep(1)
+                    media_file = genai_client.files.get(name=media_file.name)
+                
+                if media_file.state.name == "FAILED":
+                    raise Exception("File processing failed on Gemini.")
+
+                response = genai_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[media_file, "Please transcribe the audio/dialogue in this video as accurately and completely as possible."]
+                )
+                transcript = response.text or ""
+                
+                genai_client.files.delete(name=media_file.name)
+                return jsonify({'success': True, 'transcript': transcript})
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

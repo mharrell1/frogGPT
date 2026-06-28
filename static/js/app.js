@@ -5351,6 +5351,68 @@ async function exportNotes() {
     }
 }
 
+async function importVideoLink() {
+    const input = document.getElementById('video-link-input');
+    if (!input || !input.value.trim()) {
+        alert("Please paste a YouTube or direct video link first.");
+        return;
+    }
+
+    // Check quota limit first
+    const quotaData = getQueryCountForToday();
+    if (quotaData.count >= 20) {
+        alert("⚠️ Daily Free Quota Reached (20/20). Please wait for the daily reset or try again tomorrow!");
+        return;
+    }
+
+    const btn = document.getElementById('btn-import-video-link');
+    if (!btn) return;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Loading...';
+    btn.setAttribute('disabled', 'true');
+    btn.style.cursor = 'not-allowed';
+
+    const url = input.value.trim();
+    const textarea = document.getElementById('note-transcript-text');
+    if (textarea) textarea.placeholder = 'Lily is downloading/analyzing the video content to fetch the transcript... Please wait.';
+
+    try {
+        const res = await fetch('/api/notes/import-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.transcript) {
+                // Increment quota count
+                incrementQueryCount();
+
+                if (textarea) {
+                    textarea.value = data.transcript;
+                    updateWordCount();
+                }
+                alert("✨ Video content imported and transcribed successfully!");
+                input.value = '';
+            } else {
+                alert("❌ Import failed: " + (data.error || "Unknown error"));
+            }
+        } else {
+            const errData = await res.json().catch(() => ({}));
+            alert("❌ Import failed: " + (errData.error || res.statusText));
+        }
+    } catch(e) {
+        console.error("Video import error:", e);
+        alert("❌ Error connecting to import server.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.removeAttribute('disabled');
+        btn.style.cursor = 'pointer';
+        if (textarea) textarea.placeholder = 'Your transcribed text will appear here. You can also type or paste content directly to summarize...';
+    }
+}
+
 // Window exports
 window.openNoteAgentModal = openNoteAgentModal;
 window.closeNoteAgentModal = closeNoteAgentModal;
@@ -5360,3 +5422,4 @@ window.transcribeAudio = transcribeAudio;
 window.summarizeTranscript = summarizeTranscript;
 window.exportNotes = exportNotes;
 window.updateWordCount = updateWordCount;
+window.importVideoLink = importVideoLink;

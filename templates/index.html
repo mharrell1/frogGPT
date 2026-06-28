@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Outfit:wght@100..900&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.0.4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.0.5">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/study_frog.jpg') }}">
 </head>
 <body>
@@ -804,6 +804,17 @@
                         </div>
                         <span id="audio-file-name" style="font-size: 0.75rem; color: var(--color-mint); text-align: center; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;"></span>
                     </div>
+                    
+                    <div style="text-align: center; color: var(--color-text-dim); font-size: 0.8rem; font-weight: bold; margin: 4px 0;">— OR —</div>
+                    
+                    <!-- Paste Video Link Box -->
+                    <div class="video-link-box" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px;">
+                        <label for="video-link-input" style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Import from Video URL</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="video-link-input" placeholder="Paste YouTube or video URL..." style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: #fff; font-family: var(--font-body); font-size: 0.82rem; outline: none;">
+                            <button id="btn-import-video-link" class="btn btn-primary" onclick="importVideoLink()" style="font-size: 0.8rem; font-weight: bold; padding: 10px 14px; border-radius: 10px; background: var(--color-sage); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">Import</button>
+                        </div>
+                    </div>
 
                     <!-- Process Audio Button -->
                     <button id="btn-transcribe-audio" class="btn btn-primary" onclick="transcribeAudio()" disabled style="width: 100%; font-weight: bold; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--color-text-dim); border: 1px solid var(--panel-border); font-size: 0.9rem; cursor: not-allowed;">
@@ -984,6 +995,6 @@
 
     <!-- Marked.js CDN for Markdown Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.0.4"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.0.5"></script>
 </body>
 </html>
