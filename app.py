@@ -22,15 +22,24 @@ try:
     os.environ['GOOGLE_GENAI_USE_VERTEXAI'] = 'False'
 
     # Backup the existing 'app' module to prevent conflict with study-agent/app/ package
-    old_app = sys.modules.get('app')
-    if 'app' in sys.modules:
-        del sys.modules['app']
+    flask_app_module = sys.modules.get('app')
 
+    # Load the study-agent/app package manually to resolve package name conflict
+    import importlib.util
+    study_agent_app_init = os.path.join(study_agent_path, 'app', '__init__.py')
+    spec = importlib.util.spec_from_file_location("app", study_agent_app_init)
+    study_agent_app_module = importlib.util.module_from_spec(spec)
+    
+    # Register the study-agent/app package as 'app' temporarily
+    sys.modules['app'] = study_agent_app_module
+    spec.loader.exec_module(study_agent_app_module)
+
+    # Now we can import the agent and run Gunicorn without packages conflict!
     from app.agent import root_agent
 
-    # Restore the original 'app' module
-    if old_app:
-        sys.modules['app'] = old_app
+    # Restore the original flask app module in sys.modules
+    if flask_app_module:
+        sys.modules['app'] = flask_app_module
     from google.adk.runners import Runner
     from google.adk.sessions import InMemorySessionService
 
