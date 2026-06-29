@@ -835,20 +835,30 @@ def import_video_link():
         import requests
         import time
 
-        is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
+        is_youtube = ('youtube.com' in url.lower() or 
+                      'youtu.be' in url.lower() or 
+                      (len(url) == 11 and re.match(r'^[a-zA-Z0-9_-]{11}$', url)))
 
         if is_youtube:
             # 1. Parse video ID
             import re
-            patterns = [
-                r'(?:v=|\/v\/|embed\/|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})',
-            ]
             video_id = None
-            for pattern in patterns:
-                match = re.search(pattern, url)
-                if match:
-                    video_id = match.group(1)
-                    break
+            if len(url) == 11 and re.match(r'^[a-zA-Z0-9_-]{11}$', url):
+                video_id = url
+            else:
+                patterns = [
+                    r'v=([a-zA-Z0-9_-]{11})',
+                    r'youtu\.be/([a-zA-Z0-9_-]{11})',
+                    r'embed/([a-zA-Z0-9_-]{11})',
+                    r'shorts/([a-zA-Z0-9_-]{11})',
+                    r'live/([a-zA-Z0-9_-]{11})',
+                    r'v/([a-zA-Z0-9_-]{11})',
+                ]
+                for pattern in patterns:
+                    match = re.search(pattern, url)
+                    if match:
+                        video_id = match.group(1)
+                        break
             
             if not video_id:
                 return jsonify({'error': 'Could not parse YouTube Video ID from the link. Make sure it is a valid YouTube URL.'}), 400
