@@ -838,16 +838,47 @@ def import_video_link():
         is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
 
         if is_youtube:
-            prompt = (
-                f"You are a transcription assistant. Please summarize or provide a detailed transcript/outline "
-                f"of the dialogue and content of the YouTube video at this URL: {url}"
-            )
-            response = genai_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
-            )
-            transcript = response.text or "Could not retrieve transcript from video."
-            return jsonify({'success': True, 'transcript': transcript})
+            # 1. Parse video ID
+            import re
+            patterns = [
+                r'(?:v=|\/v\/|embed\/|shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+            ]
+            video_id = None
+            for pattern in patterns:
+                match = re.search(pattern, url)
+                if match:
+                    video_id = match.group(1)
+                    break
+            
+            if not video_id:
+                return jsonify({'error': 'Could not parse YouTube Video ID from the link. Make sure it is a valid YouTube URL.'}), 400
+
+            # 2. Fetch transcript via youtube-transcript-api
+            from youtube_transcript_api import YouTubeTranscriptApi
+            try:
+                transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'ja', 'ko'])
+                transcript = "\n".join([t['text'] for t in transcript_list])
+                return jsonify({'success': True, 'transcript': transcript})
+            except Exception as yt_err:
+                print(f"youtube-transcript-api failed for {video_id}: {yt_err}")
+                # Fallback to Gemini with Google Search tool grounding if API fails
+                try:
+                    from google.genai import types
+                    prompt = (
+                        f"You are a transcription assistant. Search for and provide a detailed summary "
+                        f"or outline of the dialogue and content of the YouTube video with ID {video_id} at this URL: {url}"
+                    )
+                    response = genai_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            tools=[types.Tool(google_search=types.GoogleSearch())]
+                        )
+                    )
+                    transcript = response.text or ""
+                    return jsonify({'success': True, 'transcript': transcript})
+                except Exception as gemini_err:
+                    return jsonify({'error': f'Could not retrieve transcript for this YouTube video. Make sure captions/transcripts are enabled on YouTube. Error: {str(yt_err)}'}), 400
         
         else:
             headers = {"User-Agent": "Mozilla/5.0"}
