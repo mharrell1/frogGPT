@@ -134,6 +134,72 @@ To deploy your own copy of the app:
 
 ---
 
+## 🏛️ System Architecture
+
+Froggy Pomodoro is designed as a modular, decoupled application separating the user-facing web layer, the agentic reasoning coordinator, and the secure data-access layer.
+
+```mermaid
+graph TD
+    User([User / Browser]) <-->|HTTP / WebSockets| Flask[Flask Web App]
+    Flask <-->|Direct SQLite Connection| DB[(tasks.db)]
+    
+    subgraph Multi-Agent System (ADK 2.0)
+        Flask <-->|Runner.run| RootAgent[study_agent (Coordinator)]
+        RootAgent <-->|Task Delegation| Flashcard[flashcard_agent]
+        RootAgent <-->|Task Delegation| Quiz[quiz_agent]
+        RootAgent <-->|Task Delegation| Test[test_agent]
+        RootAgent <-->|Task Delegation| Explain[explain_agent]
+        RootAgent <-->|Task Delegation| Guide[study_guide_agent]
+    end
+
+    subgraph MCP Server Integration
+        RootAgent <-->|Stdio / JSON-RPC| MCP[MCP Database Server]
+        MCP <-->|SQLite Query / Mutation| DB
+    end
+```
+
+### Component Breakdown
+1. **Frontend / Flask App (`app.py` / `templates` / `static`)**: Manages the Pomodoro timer state machine, Spotify audio sync, Web Audio sounds, and provides a cozy Web UI. It forwards chat requests to the ADK `Runner` and automatically maps user sessions.
+2. **ADK Coordinator (`study_agent`)**: The central routing node. Depending on the intent, it either invokes sub-agents to generate study materials or communicates with the database MCP server to perform task/timer updates.
+3. **MCP Database Server (`study-agent/app/mcp_server.py`)**: Exposes the SQLite database as structured tools using the Model Context Protocol standard over `stdio`.
+4. **Specialist Sub-agents (`agent.py`)**: Multi-turn task-mode agents that convert text/notes into structured schemas (flashcards, quizzes, tests, study guides).
+
+---
+
+## 🎓 Applied Key Concepts (Course Requirements)
+
+We have implemented and demonstrated the following core concepts from the Google & Kaggle AI Agents Intensive Course:
+
+### 1. Agent & Multi-agent System (ADK) — Demonstrated in [agent.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/agent.py)
+* Built using the **Google Agent Development Kit (ADK 2.0)**.
+* Implements a **coordinator/specialist topology** where the coordinator (`root_agent`) processes natural language requests and delegates structured generation tasks (`mode="task"`) to one of five sub-agents:
+  * `flashcard_agent` (structured active recall Q&As)
+  * `study_guide_agent` (topic maps & definitions)
+  * `quiz_agent` (multiple-choice assessments)
+  * `test_agent` (practice tests with mixed format)
+  * `explain_agent` (simplifications and metaphors)
+
+### 2. MCP Server (Model Context Protocol) — Demonstrated in [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/mcp_server.py)
+* Developed a custom Python MCP server using the official **FastMCP SDK**.
+* The server exposes database query and mutation interfaces as standardized tools:
+  * `get_user_tasks` (retrieves a user's items)
+  * `create_user_task` (adds a new item to SQLite)
+  * `complete_user_task` (marks a task complete)
+  * `get_pomodoro_stats` (aggregates Pomodoro logs)
+* The ADK agent connects to this server dynamically as an **MCP Client** using `StdioConnectionParams` and `StdioServerParameters`, launching the server as a subprocess and utilizing standard JSON-RPC communication.
+
+### 3. Security Features — Demonstrated in [app.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/app.py) & [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/mcp_server.py)
+* **Hashed Authentication**: User passwords are saved and validated using secure scrypt hashing (`generate_password_hash` / `check_password_hash` from `werkzeug.security`).
+* **Input Sanitization**: The MCP database tools validate and sanitize all user-supplied query text (`sanitize_string`) to mitigate SQL injection vectors.
+* **Access Control / Ownership Checks**: DB mutations enforce strict ownership rules (`WHERE id = ? AND user_id = ?`) to prevent Horizontal Privilege Escalation (e.g. preventing users from deleting other users' tasks).
+* **Zero Hard-coded Secrets**: API keys (`GOOGLE_API_KEY`) and paths (`DB_PATH`) are loaded dynamically through environment variables and `.env` files.
+
+### 4. Agent Skills — Demonstrated in [google-agents-cli-workflow](file:///Users/makaelaharrell/.agents/skills/google-agents-cli-workflow/SKILL.md) & [google-agents-cli-adk-code](file:///Users/makaelaharrell/.agents/skills/google-agents-cli-adk-code/SKILL.md)
+* Utilized file-based agent skills (`skill.md` patterns) via the **Google Agent CLI (`agents-cli`)** to manage prompt layouts, run local lints, evaluate results, and structure code.
+
+---
+
+
 ## 📂 File Structure
 
 * `app.py` — Flask server and SQLite REST API endpoints.

@@ -319,9 +319,9 @@ input[type=number] {
 /* Timer Display Circular Progress */
 .timer-display-container {
     position: relative;
-    width: 220px;
-    height: 220px;
-    margin: 0 auto 24px auto;
+    width: 170px;
+    height: 170px;
+    margin: 0 auto 16px auto;
 }
 
 .progress-ring {
@@ -359,14 +359,14 @@ input[type=number] {
 
 #timer-countdown {
     font-family: var(--font-timer);
-    font-size: 3rem;
+    font-size: 2.6rem;
     font-weight: 700;
     color: var(--color-cream);
     text-shadow: 0 0 10px rgba(135,195,143,0.3);
 }
 
 #session-counter {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--color-text-dim);
     margin-top: 4px;
 }

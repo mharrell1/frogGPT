@@ -1,3 +1,62 @@
+// --- Purge custom API key storage completely ---
+(function() {
+    try {
+        localStorage.removeItem('froggpt_custom_api_key');
+    } catch(e) {}
+})();
+
+// --- Global Encryption & Security Wrapper for localStorage ---
+(function() {
+    const originalGetItem = localStorage.getItem;
+    const originalSetItem = localStorage.setItem;
+    
+    // Derived rotating cipher key
+    const secKey = 'froggy_secure_pomo_key_2026';
+    
+    function encrypt(text) {
+        if (!text) return text;
+        let result = '';
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ secKey.charCodeAt(i % secKey.length));
+        }
+        return '__enc__' + btoa(unescape(encodeURIComponent(result)));
+    }
+    
+    function decrypt(ciphertext) {
+        if (!ciphertext || !ciphertext.startsWith('__enc__')) return ciphertext;
+        try {
+            const rawCipher = ciphertext.substring(7); // remove '__enc__' prefix
+            const decoded = decodeURIComponent(escape(atob(rawCipher)));
+            let result = '';
+            for (let i = 0; i < decoded.length; i++) {
+                result += String.fromCharCode(decoded.charCodeAt(i) ^ secKey.charCodeAt(i % secKey.length));
+            }
+            return result;
+        } catch (e) {
+            return ciphertext; // Safe fallback for unencrypted legacy content
+        }
+    }
+    
+    localStorage.setItem = function(name, value) {
+        if (name.startsWith('saved_') || name.startsWith('froggpt_')) {
+            originalSetItem.call(localStorage, name, encrypt(value));
+        } else {
+            originalSetItem.call(localStorage, name, value);
+        }
+    };
+    
+    localStorage.getItem = function(name) {
+        const raw = originalGetItem.call(localStorage, name);
+        if (raw && (name.startsWith('saved_') || name.startsWith('froggpt_'))) {
+            if (raw.startsWith('__enc__')) {
+                return decrypt(raw);
+            }
+            return raw; // Return plain text for legacy files
+        }
+        return raw;
+    };
+})();
+
 // Audio Context for Web Audio API synthesis (Rain, Forest, Ribbit chime)
 let audioCtx = null;
 let rainNode = null;
@@ -353,6 +412,9 @@ function handleTimerExpiry() {
     playRibbit();
 
     if (timerMode === 'work') {
+        // Log the completed Pomodoro focus session
+        logCompletedPomodoroSession();
+
         // Finished a work session
         if (currentSession < totalSessions) {
             timerMode = 'break';
@@ -786,6 +848,13 @@ async function toggleTask(id, completed) {
         const task = tasks.find(t => (t.id + '') === (id + ''));
         if (task) {
             task.completed = completed;
+            if (completed) {
+                const now = new Date();
+                const pad = (n) => n.toString().padStart(2, '0');
+                task.completed_at = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            } else {
+                task.completed_at = null;
+            }
             saveLocalTasks(tasks);
             if (completed) {
                 playRibbit();
@@ -908,7 +977,10 @@ function escapeHTML(str) {
 window.addEventListener('DOMContentLoaded', () => {
     // Load initial greeting
     const welcomeTexts = LILY_SPEECH.welcome;
-    document.getElementById('bubble-text').textContent = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
+    const bubbleText = document.getElementById('bubble-text');
+    if (bubbleText && welcomeTexts) {
+        bubbleText.textContent = welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)];
+    }
     
     // Initialize standard timer inputs display
     initTimerValues();
@@ -916,7 +988,10 @@ window.addEventListener('DOMContentLoaded', () => {
     updateTimerDisplay();
 
     // Set mock date on due date field: 2026-06-22
-    document.getElementById('task-due-date').value = '2026-06-22';
+    const taskDueDate = document.getElementById('task-due-date') || document.getElementById('task-due-date-modal');
+    if (taskDueDate) {
+        taskDueDate.value = '2026-06-22';
+    }
     
     // Populate categories select lists
     populateCategoryDropdowns();
@@ -926,6 +1001,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Initial render calendar
     renderCalendar();
+
 });
 
 /* --- Category Management Helpers --- */
@@ -934,11 +1010,13 @@ function populateCategoryDropdowns() {
     const filterCatSelect = document.getElementById('filter-category');
     const calCatSelect = document.getElementById('cal-item-category');
     const modalCatSelect = document.getElementById('task-category-modal');
+    const timerCatSelect = document.getElementById('timer-category-select');
     
     const taskSelected = taskCatSelect ? taskCatSelect.value : '';
     const filterSelected = filterCatSelect ? filterCatSelect.value : '';
     const calSelected = calCatSelect ? calCatSelect.value : '';
     const modalSelected = modalCatSelect ? modalCatSelect.value : '';
+    const timerSelected = timerCatSelect ? timerCatSelect.value : '';
     
     const categories = ['School', 'Work', ...customCategories];
     
@@ -1001,6 +1079,26 @@ function populateCategoryDropdowns() {
         calCatSelect.appendChild(addNewOpt);
         if (categories.includes(calSelected)) {
             calCatSelect.value = calSelected;
+        }
+    }
+
+    if (timerCatSelect) {
+        timerCatSelect.innerHTML = '';
+        categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            timerCatSelect.appendChild(opt);
+        });
+        const addNewOpt = document.createElement('option');
+        addNewOpt.value = '__add_new__';
+        addNewOpt.textContent = '+ Add Custom Category...';
+        addNewOpt.className = 'option-add-new';
+        timerCatSelect.appendChild(addNewOpt);
+        if (categories.includes(timerSelected)) {
+            timerCatSelect.value = timerSelected;
+        } else if (categories.length > 0) {
+            timerCatSelect.value = categories[0];
         }
     }
 }
@@ -1944,15 +2042,7 @@ async function sendFrogGPTMessage(messageText) {
         if (response.ok) {
             const data = await response.json();
             
-            // If backend reports a quota or rate limit, lock the local quota to 20
-            if (data.response && (data.response.includes("Quota Exceeded") || data.response.includes("Quota exceeded") || data.response.includes("Rate Limit"))) {
-                const quotaData = getQueryCountForToday();
-                quotaData.count = 20;
-                localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
-                updateQueryCounterUI();
-            } else {
-                incrementQueryCount();
-            }
+            incrementQueryCount();
 
             if (data.session_id) {
                 frogGPTSessionId = data.session_id;
@@ -2002,13 +2092,7 @@ async function sendFrogGPTMessage(messageText) {
         } else {
             const errData = await response.json().catch(() => ({}));
             
-            // If server error reports quota limit reached, lock local quota to 20
-            if (errData.error && (errData.error.includes("429") || errData.error.toLowerCase().includes("quota") || errData.error.toLowerCase().includes("resource_exhausted"))) {
-                const quotaData = getQueryCountForToday();
-                quotaData.count = 20;
-                localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
-                updateQueryCounterUI();
-            }
+
 
             const errorMsgElem = document.createElement('div');
             errorMsgElem.className = 'chat-message ai-message';
@@ -3183,22 +3267,22 @@ function updateQueryCounterUI() {
 
     if (noteCounterElem) {
         noteCounterElem.innerText = `${quotaData.count} / 20`;
-        if (quotaData.count >= 20) {
-            noteCounterElem.style.color = '#ff595e';
-            noteCounterElem.style.background = 'rgba(255, 89, 94, 0.1)';
-            startQuotaCountdown();
-        } else {
-            noteCounterElem.style.color = 'var(--color-mint)';
-            noteCounterElem.style.background = 'rgba(135, 195, 143, 0.1)';
-            if (noteDisclaimerElem) {
-                noteDisclaimerElem.innerHTML = `
-                    <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
-                    <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135, 195, 143, 0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
-                `;
+            if (quotaData.count >= 20) {
+                noteCounterElem.style.color = '#ff595e';
+                noteCounterElem.style.background = 'rgba(255, 89, 94, 0.1)';
+                startQuotaCountdown();
+            } else {
+                noteCounterElem.style.color = 'var(--color-mint)';
+                noteCounterElem.style.background = 'rgba(135, 195, 143, 0.1)';
+                if (noteDisclaimerElem) {
+                    noteDisclaimerElem.innerHTML = `
+                        <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
+                        <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135, 195, 143, 0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
+                    `;
+                }
             }
         }
     }
-}
 
 function startQuotaCountdown() {
     const disclaimerElem = document.querySelector('.froggpt-quota-disclaimer');
@@ -4573,11 +4657,27 @@ window.toggleFrogGPTHistoryList = toggleFrogGPTHistoryList;
 window.startNewFrogGPTSession = startNewFrogGPTSession;
 window.loadFrogGPTSession = loadFrogGPTSession;
 
+
+function deleteNoteInPanel(noteId) {
+    if (confirm("Are you sure you want to delete this note from your library?")) {
+        let notes = loadSavedNotes();
+        notes = notes.filter(n => n.id !== noteId);
+        localStorage.setItem('saved_note_agent_notes', JSON.stringify(notes));
+        activeLibraryItemId = null;
+        showLibraryInPanel();
+    }
+}
+
 // Note Library Helper Exports
 window.openNotesLibraryDirectly = function() {
-    closeNoteAgentModal();
-    openFlashcardsLibraryModal();
-    setLibraryTab('notes');
+    try {
+        closeNoteAgentModal();
+        openFlashcardsLibraryModal();
+        setLibraryTab('notes');
+    } catch(err) {
+        console.error("openNotesLibraryDirectly error:", err);
+        alert("❌ Error opening note library: " + err.message);
+    }
 };
 window.deleteNoteInPanel = deleteNoteInPanel;
 window.exportNoteFromLibrary = async function(noteId, event) {
@@ -4626,52 +4726,70 @@ window.exportNoteFromLibrary = async function(noteId, event) {
 };
 
 window.studyNotesWithFrogGPT = function(noteId, action) {
-    const notesList = loadSavedNotes();
-    const note = notesList.find(n => n.id === noteId);
-    if (!note) {
-        // Fallback: check if we are studying the active note agents preview before saving
-        if (noteId === 'active' && generatedNotesMarkdown) {
-            const filenameInput = document.getElementById('note-filename');
-            const tempNote = {
-                title: filenameInput && filenameInput.value ? filenameInput.value : 'Active Audio Summary',
-                notes: generatedNotesMarkdown
-            };
-            triggerAction(tempNote);
-        } else {
-            alert("No active notes found to study!");
+    try {
+        const notesList = loadSavedNotes();
+        const note = notesList.find(n => n.id === noteId);
+        if (!note) {
+            // Fallback: check if we are studying the active note agents preview before saving
+            if (noteId === 'active' && generatedNotesMarkdown) {
+                const filenameInput = document.getElementById('note-filename');
+                const tempNote = {
+                    title: filenameInput && filenameInput.value ? filenameInput.value : 'Active Audio Summary',
+                    notes: generatedNotesMarkdown
+                };
+                triggerAction(tempNote);
+            } else {
+                alert("No active notes found to study!");
+            }
+            return;
         }
-        return;
-    }
-    triggerAction(note);
+        triggerAction(note);
 
-    function triggerAction(targetNote) {
-        let promptText = '';
-        if (action === 'flashcards') {
-            promptText = `Create a set of flashcards based on these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
-        } else if (action === 'quiz') {
-            promptText = `Create a quiz based on these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
-        } else if (action === 'test') {
-            promptText = `Create a practice test based on these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
-        } else if (action === 'guide') {
-            promptText = `Create a comprehensive study guide based on these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
-        } else if (action === 'chat') {
-            promptText = `I have some questions about these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}\n\nPlease read them and let me know if you are ready to answer my questions!`;
+        function triggerAction(targetNote) {
+            try {
+                let promptText = '';
+                if (action === 'flashcards') {
+                    promptText = `Please delegate to the flashcard_agent to generate a structured flashcard deck from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                } else if (action === 'quiz') {
+                    promptText = `Please delegate to the quiz_agent to generate a multiple-choice practice quiz from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                } else if (action === 'test') {
+                    promptText = `Please delegate to the test_agent to generate a comprehensive mixed-format practice test from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                } else if (action === 'guide') {
+                    promptText = `Please delegate to the study_guide_agent to generate a comprehensive study guide from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                } else if (action === 'chat') {
+                    promptText = `I have some questions about these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}\n\nPlease read them and let me know if you are ready to answer my questions!`;
+                }
+
+                // Close modal
+                closeNoteAgentModal();
+
+                // Close Library view inside frogGPT if open
+                showStudyPanelPlaceholder();
+
+                // Start a fresh frogGPT session to avoid task routing conflicts
+                startNewFrogGPTSession();
+
+                // Open frogGPT chat
+                openFrogGPTModal();
+                switchFrogGPTTab('chat');
+
+                // Submit prompt
+                setTimeout(() => {
+                    try {
+                        handleQuickPrompt(promptText);
+                    } catch(promptErr) {
+                        console.error("handleQuickPrompt failed:", promptErr);
+                        alert("❌ handleQuickPrompt failed: " + promptErr.message);
+                    }
+                }, 300);
+            } catch(triggerErr) {
+                console.error("triggerAction error:", triggerErr);
+                alert("❌ triggerAction error: " + triggerErr.message);
+            }
         }
-
-        // Close modal
-        closeNoteAgentModal();
-
-        // Close Library view inside frogGPT if open
-        showStudyPanelPlaceholder();
-
-        // Open frogGPT chat
-        openFrogGPTModal();
-        switchFrogGPTTab('chat');
-
-        // Submit prompt
-        setTimeout(() => {
-            handleQuickPrompt(promptText);
-        }, 300);
+    } catch(err) {
+        console.error("studyNotesWithFrogGPT error:", err);
+        alert("❌ Error starting study session: " + err.message);
     }
 };
 
@@ -4930,7 +5048,7 @@ let noteIsRecording = false;
 let noteTimerInterval = null;
 let noteRecordedBlob = null;
 let noteAudioFile = null;
-let generatedNotesMarkdown = "";
+var generatedNotesMarkdown = "";
 
 function openNoteAgentModal() {
     closeCalendarModal();
@@ -5294,7 +5412,7 @@ async function summarizeTranscript() {
                 alert("✨ Summary generated successfully!");
             } catch(renderErr) {
                 console.error("Rendering error:", renderErr);
-                alert("❌ Render error: Failed to display the generated summary.");
+                alert("❌ Render error: Failed to display the generated summary. Details: " + renderErr.message);
             }
         } else {
             if (previewContainer) previewContainer.innerHTML = '<span style="color: #ff595e;">Failed to generate notes.</span>';
@@ -5447,6 +5565,346 @@ async function importVideoLink() {
         if (textarea) textarea.placeholder = 'Your transcribed text will appear here. You can also type or paste content directly to summarize...';
     }
 }
+
+// --- Pomodoro Category and Logging Helpers ---
+
+window.handleTimerCategorySelectChange = function(value) {
+    const customGroup = document.getElementById('timer-custom-category-group');
+    if (!customGroup) return;
+    if (value === '__add_new__') {
+        customGroup.classList.remove('hidden');
+        const input = document.getElementById('timer-custom-category-name');
+        if (input) input.focus();
+    } else {
+        customGroup.classList.add('hidden');
+    }
+};
+
+window.saveTimerCustomCategory = function() {
+    const input = document.getElementById('timer-custom-category-name');
+    if (!input) return;
+    const catName = input.value.trim();
+    
+    if (!catName) return;
+    
+    const exists = ['school', 'work', ...customCategories.map(c => c.toLowerCase())].includes(catName.toLowerCase());
+    if (exists) {
+        alert('This category already exists, ribbit!');
+        return;
+    }
+    
+    customCategories.push(catName);
+    localStorage.setItem('froggy_custom_categories', JSON.stringify(customCategories));
+    populateCategoryDropdowns();
+    
+    // Select the new category in the timer dropdown
+    const select = document.getElementById('timer-category-select');
+    if (select) {
+        select.value = catName;
+    }
+    
+    const customGroup = document.getElementById('timer-custom-category-group');
+    if (customGroup) customGroup.classList.add('hidden');
+    input.value = '';
+};
+
+async function logCompletedPomodoroSession() {
+    const categorySelect = document.getElementById('timer-category-select');
+    const category = categorySelect ? categorySelect.value : 'School';
+    const workMin = parseInt(document.getElementById('session-length').value) || 25;
+    
+    // Format timestamp as YYYY-MM-DD HH:MM:SS
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    
+    if (isLoggedIn) {
+        try {
+            await fetch('/api/pomodoro/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    category: category,
+                    duration_minutes: workMin
+                })
+            });
+        } catch (err) {
+            console.error("Error logging pomodoro session to backend:", err);
+        }
+    } else {
+        // Guest mode - store in localStorage
+        const guestLogs = JSON.parse(localStorage.getItem('froggy_guest_pomodoro_logs') || '[]');
+        guestLogs.push({
+            category: category,
+            duration_minutes: workMin,
+            completed_at: timestamp
+        });
+        localStorage.setItem('froggy_guest_pomodoro_logs', JSON.stringify(guestLogs));
+    }
+}
+
+// --- Statistics Modal Operations ---
+
+window.openStatsModal = function() {
+    try {
+        closeCalendarModal();
+        closeGamesModal();
+        closeFrogGPTModal();
+        closeNoteAgentModal();
+        
+        const modal = document.getElementById('stats-modal');
+        if (modal) {
+            modal.classList.add('open');
+            const btn = document.getElementById('btn-sidebar-stats');
+            if (btn) btn.classList.add('active');
+            
+            // Default month filter input to current month
+            const now = new Date();
+            const yyyymm = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+            const filter = document.getElementById('stats-month-filter');
+            if (filter && !filter.value) {
+                filter.value = yyyymm;
+            }
+            
+            loadStatsForMonth(filter ? filter.value : yyyymm);
+        } else {
+            alert("❌ stats-modal element not found in DOM!");
+        }
+    } catch(err) {
+        console.error("openStatsModal error:", err);
+        alert("❌ Error opening stats: " + err.message);
+    }
+};
+
+window.closeStatsModal = function() {
+    const modal = document.getElementById('stats-modal');
+    if (modal) {
+        modal.classList.remove('open');
+    }
+    const btn = document.getElementById('btn-sidebar-stats');
+    if (btn) btn.classList.remove('active');
+};
+
+window.loadStatsForMonth = async function(monthStr) {
+    try {
+        if (!monthStr) return;
+        
+        let pomodoroLogs = [];
+        let completedTasks = [];
+        
+        if (isLoggedIn) {
+            try {
+                const response = await fetch(`/api/pomodoro/stats?month=${monthStr}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    pomodoroLogs = data.pomodoro_logs || [];
+                    completedTasks = data.completed_tasks || [];
+                }
+            } catch (err) {
+                console.error("Error loading monthly stats:", err);
+            }
+        } else {
+            // Guest mode - read from localStorage
+            const guestLogs = JSON.parse(localStorage.getItem('froggy_guest_pomodoro_logs') || '[]');
+            pomodoroLogs = guestLogs.filter(log => log.completed_at && log.completed_at.startsWith(monthStr));
+            
+            const guestTasks = getLocalTasks();
+            completedTasks = guestTasks.filter(task => task.completed === 1 && task.completed_at && task.completed_at.startsWith(monthStr));
+        }
+        
+        renderStats({ pomodoro_logs: pomodoroLogs, completed_tasks: completedTasks }, monthStr);
+    } catch(err) {
+        console.error("loadStatsForMonth error:", err);
+        alert("❌ Error loading stats for month: " + err.message);
+    }
+};
+
+function renderStats(data, monthStr) {
+    try {
+        const pLogs = data.pomodoro_logs;
+        const completedTasks = data.completed_tasks;
+        
+        // 1. Calculate Total Hours
+        let totalMinutes = 0;
+        const categoryMinutes = {};
+        
+        pLogs.forEach(log => {
+            const mins = parseInt(log.duration_minutes) || 25;
+            totalMinutes += mins;
+            
+            const cat = log.category || 'School';
+            categoryMinutes[cat] = (categoryMinutes[cat] || 0) + mins;
+        });
+        
+        const totalHours = (totalMinutes / 60).toFixed(1);
+        document.getElementById('stats-total-hours').textContent = totalHours;
+        
+        // 2. Set Tasks Completed
+        document.getElementById('stats-completed-tasks').textContent = completedTasks.length;
+        
+        // 3. Render Category Progress Bars
+        const categoryBarsContainer = document.getElementById('stats-category-bars');
+        if (categoryBarsContainer) {
+            categoryBarsContainer.innerHTML = '';
+            
+            if (totalMinutes === 0) {
+                categoryBarsContainer.innerHTML = `<div style="text-align: center; color: var(--color-sage); font-style: italic; font-size: 0.9rem; padding: 10px;">No focus hours logged for this month, ribbit.</div>`;
+            } else {
+                // Sort categories by focus duration descending
+                const sortedCats = Object.entries(categoryMinutes).sort((a, b) => b[1] - a[1]);
+                
+                sortedCats.forEach(([cat, mins]) => {
+                    const percent = Math.round((mins / totalMinutes) * 100);
+                    const hrs = (mins / 60).toFixed(1);
+                    
+                    const barEl = document.createElement('div');
+                    barEl.style.display = 'flex';
+                    barEl.style.flexDirection = 'column';
+                    barEl.style.gap = '4px';
+                    
+                    // Color palette lookup
+                    let color = '#87c38f'; // Default green
+                    if (cat.toLowerCase() === 'work') color = '#f29e4c';
+                    else if (cat.toLowerCase() === 'school') color = '#87c38f';
+                    else {
+                        // Generate a color based on category name string hash
+                        let hash = 0;
+                        for (let i = 0; i < cat.length; i++) {
+                            hash = cat.charCodeAt(i) + ((hash << 5) - hash);
+                        }
+                        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+                        color = '#' + '00000'.substring(0, 6 - c.length) + c;
+                    }
+                    
+                    barEl.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--color-cream);">
+                            <span>${escapeHTML(cat)}</span>
+                            <span><strong>${hrs} hrs</strong> (${percent}%)</span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.04);">
+                            <div style="width: ${percent}%; height: 100%; background: ${color}; border-radius: 4px;"></div>
+                        </div>
+                    `;
+                    categoryBarsContainer.appendChild(barEl);
+                });
+            }
+        }
+        
+        // 4. Render Monthly Activity Log Log
+        const logListContainer = document.getElementById('stats-activity-log-list');
+        if (logListContainer) {
+            logListContainer.innerHTML = '';
+            
+            // Combine pomodoro logs and task logs, sort by completed_at desc
+            const allItems = [];
+            
+            pLogs.forEach(log => {
+                allItems.push({
+                    type: 'pomodoro',
+                    title: `Completed focus session (${log.duration_minutes} min)`,
+                    category: log.category,
+                    time: log.completed_at
+                });
+            });
+            
+            completedTasks.forEach(task => {
+                allItems.push({
+                    type: 'task',
+                    title: `Checked off task: "${task.title}"`,
+                    category: task.category,
+                    time: task.completed_at
+                });
+            });
+            
+            // Sort newest first
+            allItems.sort((a, b) => new Date(b.time) - new Date(a.time));
+            
+            if (allItems.length === 0) {
+                logListContainer.innerHTML = `<div style="text-align: center; color: var(--color-sage); font-style: italic; font-size: 0.9rem; padding: 10px;">No activity logged yet, ribbit!</div>`;
+            } else {
+                allItems.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.style.display = 'flex';
+                    itemEl.style.justifyContent = 'space-between';
+                    itemEl.style.alignItems = 'center';
+                    itemEl.style.padding = '8px 10px';
+                    itemEl.style.background = 'rgba(255, 255, 255, 0.02)';
+                    itemEl.style.border = '1px solid rgba(255, 255, 255, 0.04)';
+                    itemEl.style.borderRadius = '8px';
+                    itemEl.style.fontSize = '0.85rem';
+                    
+                    const emoji = item.type === 'pomodoro' ? '⏱️' : '✅';
+                    const formattedTime = item.time ? item.time.substring(5, 16) : ''; // MM-DD HH:MM
+                    
+                    itemEl.innerHTML = `
+                        <div style="display: flex; gap: 8px; align-items: center; color: var(--color-cream); flex: 1; min-width: 0;">
+                            <span>${emoji}</span>
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHTML(item.title)}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; font-size: 0.8rem; color: var(--color-sage);">
+                            <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">${escapeHTML(item.category || 'School')}</span>
+                            <span>${formattedTime}</span>
+                        </div>
+                    `;
+                    logListContainer.appendChild(itemEl);
+                });
+            }
+        }
+    } catch(err) {
+        console.error("renderStats error:", err);
+        alert("❌ Error rendering stats: " + err.message);
+    }
+}
+
+window.compileMonthlyReport = async function() {
+    const filter = document.getElementById('stats-month-filter');
+    const monthStr = filter ? filter.value : '';
+    if (!monthStr) {
+        alert("Please select a month for compiling the report, ribbit!");
+        return;
+    }
+    
+    if (isLoggedIn) {
+        // Direct download using GET
+        window.open(`/api/pomodoro/compile-report?month=${monthStr}`, '_blank');
+    } else {
+        // Guest mode: package guest data and post to endpoint
+        try {
+            const guestLogs = JSON.parse(localStorage.getItem('froggy_guest_pomodoro_logs') || '[]');
+            const monthLogs = guestLogs.filter(log => log.completed_at && log.completed_at.startsWith(monthStr));
+            
+            const guestTasks = getLocalTasks();
+            const monthTasks = guestTasks.filter(task => task.completed === 1 && task.completed_at && task.completed_at.startsWith(monthStr));
+            
+            const response = await fetch('/api/pomodoro/compile-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    month: monthStr,
+                    pomodoro_logs: monthLogs,
+                    completed_tasks: monthTasks.map(t => ({ title: t.title, category: t.category, completed_at: t.completed_at }))
+                })
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Froggy_Pomodoro_Report_${monthStr}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert("❌ Failed to compile guest report.");
+            }
+        } catch (err) {
+            console.error("Error compiling guest report:", err);
+            alert("❌ Error compiling report.");
+        }
+    }
+};
 
 // Window exports
 window.openNoteAgentModal = openNoteAgentModal;

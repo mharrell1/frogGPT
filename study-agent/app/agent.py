@@ -41,6 +41,9 @@ from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
 from google.adk.tools.load_web_page import load_web_page
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from mcp import StdioServerParameters
 from google.genai import types
 
 from .schemas import FlashcardDeck, PracticeTest, Quiz, StudyGuide, TopicExplanation
@@ -193,12 +196,49 @@ After generating the explanation, call finish_task with the TopicExplanation res
 # Root Coordinator Agent
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─── MCP Server Setup ────────────────────────────────────────────────────────
+mcp_python = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ".venv",
+    "bin",
+    "python"
+)
+if not os.path.exists(mcp_python):
+    mcp_python = sys.executable
+
+mcp_script = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "mcp_server.py"
+)
+
+db_mcp_toolset = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command=mcp_python,
+            args=[mcp_script],
+        )
+    )
+)
+
+async def init_state(callback_context) -> None:
+    """Initialize state before agent runs to ensure context variables like user_id are set."""
+    if callback_context.state is None:
+        callback_context.state = {}
+    if "user_id" not in callback_context.state:
+        callback_context.state["user_id"] = "guest_user"
+
+# Root Coordinator Agent
+# ─────────────────────────────────────────────────────────────────────────────
+
 root_agent = Agent(
     name="study_agent",
     model=_model,
     description="A study assistant that generates flashcards, study guides, quizzes, practice tests, and explains complex topics.",
+    before_agent_callback=init_state,
     instruction="""
 You are **Study Agent** — an AI-powered study assistant that helps students learn more effectively.
+
+You are interacting with the user whose username is {user_id}. When querying or updating tasks or pomodoro stats, always use this username.
 
 You can generate any of the following study materials or explanations:
   📇 **Flashcards** — Q&A pairs for active recall practice
@@ -206,6 +246,12 @@ You can generate any of the following study materials or explanations:
   📝 **Practice Quiz** — multiple-choice questions to test understanding
   🧪 **Practice Test** — full mixed-format test (true/false, MCQ, short answer)
   💡 **Explanation / Simplification** — simplified explanation with analogies and key takeaways for quick learning
+
+You also have access to the user's task list (to-do tasks) and Pomodoro timer logs via the custom MCP Database Server tools:
+  📋 **Task Management** — list tasks (`get_user_tasks`), create tasks (`create_user_task`), and mark tasks as completed (`complete_user_task`) in the database.
+  ⏱️ **Pomodoro Stats** — retrieve aggregated Pomodoro study sessions and minutes (`get_pomodoro_stats`).
+
+When the user asks about their tasks, schedule, or pomodoro progress, use these MCP database tools.
 
 ═══ HOW TO HANDLE USER REQUESTS ═══
 
@@ -283,6 +329,7 @@ If the user says yes (or asks to export at any point):
         format_explanation_markdown,
         export_as_pdf,
         export_as_docx,
+        db_mcp_toolset,
     ],
 )
 

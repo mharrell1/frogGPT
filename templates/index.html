@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Froggy Pomodoro - Study, Relax & Hop</title>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("🚨 Global JS Error: " + message + "\nLine: " + lineno + " in " + source);
+            return false;
+        };
+    </script>
     <meta name="description" content="A cute, cozy frog-themed Pomodoro timer and task manager integrated with Spotify to help you stay focused and productive.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Outfit:wght@100..900&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.0.6">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.2.5">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/study_frog.jpg') }}">
 </head>
 <body>
@@ -46,6 +52,9 @@
             </button>
             <button id="btn-sidebar-notes" class="btn-sidebar-item" onclick="openNoteAgentModal()" title="frogNote Agent">
                 <span>🗒️</span>
+            </button>
+            <button id="btn-sidebar-stats" class="btn-sidebar-item" onclick="openStatsModal()" title="Pond Stats & Reports">
+                <span>📊</span>
             </button>
         </div>
         <div class="sidebar-bottom">
@@ -126,10 +135,28 @@
                         </div>
                     </div>
 
+                    <div class="timer-category-container" style="margin-top: 12px; display: flex; flex-direction: column; gap: 4px; padding: 0 10px;">
+                        <label for="timer-category-select" style="font-size: 0.75rem; font-weight: 600; color: var(--color-sage); text-transform: uppercase;">Focus Category</label>
+                        <select id="timer-category-select" onchange="handleTimerCategorySelectChange(this.value)" style="padding: 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--panel-border); border-radius: 10px; color: var(--color-cream); font-family: var(--font-body); font-size: 0.9rem; cursor: pointer; width: 100%;">
+                            <option value="School">School</option>
+                            <option value="Work">Work</option>
+                            <option value="__add_new__" class="option-add-new" style="color: var(--urgency-medium); font-weight: bold;">+ Add Custom Category...</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Category Inputs for Timer -->
+                    <div id="timer-custom-category-group" class="form-group hidden" style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px; padding: 0 10px;">
+                        <label for="timer-custom-category-name" style="font-size: 0.75rem; font-weight: 600; color: var(--color-sage); text-transform: uppercase;">New Category Name</label>
+                        <div class="custom-category-input-wrapper" style="display: flex; gap: 8px; width: 100%;">
+                            <input type="text" id="timer-custom-category-name" placeholder="E.g., Personal, Chores" autocomplete="off" style="flex-grow: 1; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; color: var(--color-cream); font-size: 0.9rem;">
+                            <button type="button" class="btn btn-secondary" onclick="saveTimerCustomCategory()" style="padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer;">Add</button>
+                        </div>
+                    </div>
+
                     <div class="timer-display-container">
-                        <svg class="progress-ring" width="220" height="220">
-                            <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="98" cx="110" cy="110" />
-                            <circle class="progress-ring__circle" stroke="#87c38f" stroke-width="8" fill="transparent" r="98" cx="110" cy="110" />
+                        <svg class="progress-ring" width="170" height="170">
+                            <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="76" cx="85" cy="85" />
+                            <circle class="progress-ring__circle" stroke="#87c38f" stroke-width="8" fill="transparent" r="76" cx="85" cy="85" />
                         </svg>
                         <div class="timer-info">
                             <span id="timer-state">Focus</span>
@@ -396,6 +423,58 @@
 
                         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 18px;">Add to Calendar</button>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Modal Overlay -->
+    <div id="stats-modal" class="modal-overlay" onclick="if(event.target === this) closeStatsModal()">
+        <div class="modal-content glass-panel stats-modal-content" style="max-width: 600px; width: 90%;">
+            <div class="modal-header">
+                <h2>📊 Lily's Pond Stats & Reports</h2>
+                <button class="btn-close" onclick="closeStatsModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Month Filter -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px;">
+                    <span style="font-weight: bold; color: var(--color-mint); font-size: 0.95rem;">Select Month:</span>
+                    <input type="month" id="stats-month-filter" onchange="loadStatsForMonth(this.value)" style="padding: 6px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--color-cream); font-family: var(--font-body); font-size: 0.9rem;">
+                </div>
+
+                <!-- Stats Breakdown Cards -->
+                <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="stat-card glass-panel" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border);">
+                        <h3 style="font-size: 0.8rem; color: var(--color-sage); margin: 0 0 5px 0; text-transform: uppercase; font-family: var(--font-body);">Total Focus Hours</h3>
+                        <span id="stats-total-hours" style="font-size: 2.2rem; font-weight: bold; color: var(--color-mint); font-family: var(--font-heading);">0.0</span>
+                    </div>
+                    <div class="stat-card glass-panel" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border);">
+                        <h3 style="font-size: 0.8rem; color: var(--color-sage); margin: 0 0 5px 0; text-transform: uppercase; font-family: var(--font-body);">Tasks Completed</h3>
+                        <span id="stats-completed-tasks" style="font-size: 2.2rem; font-weight: bold; color: var(--color-mint); font-family: var(--font-heading);">0</span>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Progress Bars -->
+                <div>
+                    <h3 style="font-family: var(--font-heading); color: var(--color-cream); font-size: 1.1rem; margin: 0 0 10px 0;">⏱️ Focus Time by Category</h3>
+                    <div id="stats-category-bars" style="display: flex; flex-direction: column; gap: 12px; max-height: 160px; overflow-y: auto; padding-right: 4px;">
+                        <!-- Dynamically filled with category progress bars -->
+                    </div>
+                </div>
+
+                <!-- Compile & Export Button -->
+                <div style="text-align: center;">
+                    <button class="btn btn-primary" onclick="compileMonthlyReport()" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 10px; font-family: var(--font-heading); font-weight: bold;">
+                        📄 Compile & Download Monthly Activity Log (PDF)
+                    </button>
+                </div>
+
+                <!-- Detailed Activity Log List -->
+                <div>
+                    <h3 style="font-family: var(--font-heading); color: var(--color-cream); font-size: 1.1rem; margin: 0 0 10px 0;">📜 Monthly Activity Log</h3>
+                    <div id="stats-activity-log-list" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 10px; border: 1px solid var(--panel-border);">
+                        <!-- Dynamically filled with activity log items -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -689,8 +768,10 @@
                         <div class="model-select-wrapper">
                             <label for="froggpt-model-select">🤖 Study Model:</label>
                             <select id="froggpt-model-select" class="froggpt-model-select">
-                                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Fast, Default)</option>
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Powerful, Complex tasks)</option>
+                                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (20 reqs/day)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (2 reqs/day)</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (1500 reqs/day)</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (50 reqs/day)</option>
                             </select>
                         </div>
                     </div>
@@ -995,6 +1076,6 @@
 
     <!-- Marked.js CDN for Markdown Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.0.6"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2.5"></script>
 </body>
 </html>

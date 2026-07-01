@@ -129,6 +129,16 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Create pomodoro_logs table
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS pomodoro_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(id),
+            category TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL,
+            completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     # Add columns to tasks table if they don't exist
     cursor = db.execute("PRAGMA table_info(tasks)")
     columns = [row['name'] for row in cursor.fetchall()]
@@ -142,6 +152,8 @@ def init_db():
         db.execute("ALTER TABLE tasks ADD COLUMN urgency TEXT")
     if 'notes' not in columns:
         db.execute("ALTER TABLE tasks ADD COLUMN notes TEXT")
+    if 'completed_at' not in columns:
+        db.execute("ALTER TABLE tasks ADD COLUMN completed_at TIMESTAMP")
     db.commit()
 
 with app.app_context():
@@ -293,8 +305,11 @@ def update_task(task_id):
         update_fields = []
         params = []
         if completed is not None:
+            import datetime
             update_fields.append("completed = ?")
             params.append(1 if completed else 0)
+            update_fields.append("completed_at = ?")
+            params.append(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') if completed else None)
         if title is not None:
             update_fields.append("title = ?")
             params.append((title or '').strip())
@@ -405,6 +420,8 @@ def froggpt_chat():
     if not message_text:
         return jsonify({'error': 'Message is required'}), 400
 
+    orig_api_clients = {}
+
     # Get or create session ID for the user
     user_id = session.get('username', 'guest_user')
     session_id = data.get('session_id')
@@ -423,6 +440,8 @@ def froggpt_chat():
             session_id = new_sess.id
         except Exception as e:
             return jsonify({'error': f'Failed to create session: {e}'}), 500
+
+
 
     try:
         from google.genai import types
@@ -445,11 +464,15 @@ def froggpt_chat():
         agents_to_update = [root_agent]
         if hasattr(root_agent, 'sub_agents') and root_agent.sub_agents:
             agents_to_update.extend(root_agent.sub_agents)
-            
+
         for ag in agents_to_update:
             if hasattr(ag, 'model') and ag.model:
                 if hasattr(ag.model, 'model'):
                     ag.model.model = model_name
+
+        sess = froggpt_session_service.get_session_sync(user_id=user_id, session_id=session_id, app_name="frogGPT")
+        if sess:
+            sess.state["user_id"] = user_id
 
         msg = types.Content(role="user", parts=[types.Part.from_text(text=message_text)])
         events = list(
@@ -480,27 +503,56 @@ def froggpt_chat():
                     author = getattr(event, 'author', '')
                     out_json = json.dumps(event.output)
                     res = {}
-                    if author == 'quiz_agent' or ('questions' in event.output and 'options' in str(event.output)):
+                    
+                    # 1. Prioritize strict author matching
+                    if author == 'quiz_agent':
                         res = format_quiz_markdown(out_json)
                         if res.get('status') == 'success':
                             structured_data = event.output
                             subagent_author = 'quiz_agent'
-                    elif author == 'flashcard_agent' or 'cards' in event.output:
+                    elif author == 'flashcard_agent':
                         res = format_flashcards_markdown(out_json)
                         if res.get('status') == 'success':
                             structured_data = event.output
                             subagent_author = 'flashcard_agent'
-                    elif author == 'study_guide_agent' or 'sections' in event.output:
+                    elif author == 'study_guide_agent':
                         res = format_study_guide_markdown(out_json)
                         if res.get('status') == 'success':
                             structured_data = event.output
                             subagent_author = 'study_guide_agent'
-                    elif author == 'test_agent' or 'true_false' in event.output or 'multiple_choice' in event.output:
+                    elif author == 'test_agent':
                         res = format_practice_test_markdown(out_json)
                         if res.get('status') == 'success':
                             structured_data = event.output
                             subagent_author = 'test_agent'
-                    elif author == 'explain_agent' or 'simple_explanation' in event.output or 'analogy' in event.output:
+                    elif author == 'explain_agent':
+                        res = format_explanation_markdown(out_json)
+                        if res.get('status') == 'success':
+                            structured_data = event.output
+                            subagent_author = 'explain_agent'
+                            
+                    # 2. Fallbacks (only if author was not matched above)
+                    elif 'questions' in event.output and 'options' in str(event.output):
+                        res = format_quiz_markdown(out_json)
+                        if res.get('status') == 'success':
+                            structured_data = event.output
+                            subagent_author = 'quiz_agent'
+                    elif 'cards' in event.output:
+                        res = format_flashcards_markdown(out_json)
+                        if res.get('status') == 'success':
+                            structured_data = event.output
+                            subagent_author = 'flashcard_agent'
+                    elif 'sections' in event.output:
+                        res = format_study_guide_markdown(out_json)
+                        if res.get('status') == 'success':
+                            structured_data = event.output
+                            subagent_author = 'study_guide_agent'
+                    elif 'true_false' in event.output or 'multiple_choice' in event.output:
+                        res = format_practice_test_markdown(out_json)
+                        if res.get('status') == 'success':
+                            structured_data = event.output
+                            subagent_author = 'test_agent'
+                    elif 'simple_explanation' in event.output or 'analogy' in event.output:
                         res = format_explanation_markdown(out_json)
                         if res.get('status') == 'success':
                             structured_data = event.output
@@ -566,6 +618,13 @@ def froggpt_chat():
         if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
             return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id})
         return jsonify({'error': str(e)}), 500
+    finally:
+        # Restore original cached clients
+        for model, orig_client in orig_api_clients.items():
+            if orig_client is None:
+                model.__dict__.pop('api_client', None)
+            else:
+                model.__dict__['api_client'] = orig_client
 
 @app.route('/api/froggpt/history', methods=['GET'])
 def froggpt_list_history():
@@ -674,7 +733,8 @@ def froggpt_session_history(session_id):
 # --- AI Note Taking Agent endpoints ---
 @app.route('/api/notes/transcribe', methods=['POST'])
 def notes_transcribe():
-    if not genai_client:
+    active_client = genai_client
+    if not active_client:
         return jsonify({'error': 'Gemini API client not initialized. Ensure GEMINI_API_KEY is configured.'}), 500
 
     if 'audio' not in request.files:
@@ -689,7 +749,7 @@ def notes_transcribe():
         mime_type = audio_file.mimetype or 'audio/webm'
         
         # Call Gemini to transcribe
-        response = genai_client.models.generate_content(
+        response = active_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[
                 types.Part.from_bytes(
@@ -709,7 +769,8 @@ def notes_transcribe():
 
 @app.route('/api/notes/summarize', methods=['POST'])
 def notes_summarize():
-    if not genai_client:
+    active_client = genai_client
+    if not active_client:
         return jsonify({'error': 'Gemini API client not initialized. Ensure GEMINI_API_KEY is configured.'}), 500
 
     data = request.get_json() or {}
@@ -741,7 +802,7 @@ def notes_summarize():
                 f"Transcript:\n{transcript}"
             )
 
-        response = genai_client.models.generate_content(
+        response = active_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt
         )
@@ -863,71 +924,111 @@ def import_video_link():
             if not video_id:
                 return jsonify({'error': 'Could not parse YouTube Video ID from the link. Make sure it is a valid YouTube URL.'}), 400
 
-            # 2. Fetch transcript via youtube-transcript-api
-            from youtube_transcript_api import YouTubeTranscriptApi
+            # 2. Try fetching transcript via youtube-transcript.ai API
             try:
-                api = YouTubeTranscriptApi()
-                transcript_list = api.fetch(video_id, languages=['en', 'es', 'fr', 'de', 'it', 'ja', 'ko'])
-                transcript = "\n".join([getattr(t, 'text', '') for t in transcript_list])
-                return jsonify({'success': True, 'transcript': transcript})
-            except Exception as yt_err:
-                print(f"youtube-transcript-api failed for {video_id}: {yt_err}")
-                # Fallback: Download audio stream using yt-dlp and upload to Gemini
-                try:
-                    import yt_dlp
-                    import tempfile
-                    import glob
+                import requests
+                import re
+                yt_api_url = f"https://youtube-transcript.ai/transcript/{video_id}.txt"
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+                response = requests.get(yt_api_url, headers=headers, timeout=15)
+                if response.status_code == 200 and "## Transcript" in response.text:
+                    lines = response.text.split('\n')
+                    transcript_lines = []
+                    in_transcript = False
+                    for line in lines:
+                        if line.startswith('## Transcript'):
+                            in_transcript = True
+                            continue
+                        if in_transcript:
+                            line_clean = line.strip()
+                            if line_clean:
+                                # Remove timestamps like [0:01] or [12:34:56]
+                                line_clean = re.sub(r'^\[\d+(?::\d+)+\]\s*', '', line_clean)
+                                transcript_lines.append(line_clean)
                     
-                    temp_dir = tempfile.gettempdir()
-                    outtmpl = os.path.join(temp_dir, f'yt_{video_id}.%(ext)s')
-                    
-                    ydl_opts = {
-                        'format': 'bestaudio/best',
-                        'outtmpl': outtmpl,
-                        'quiet': True,
-                        'no_warnings': True,
-                    }
-                    
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(url, download=True)
-                        filename = ydl.prepare_filename(info)
-                    
-                    if not os.path.exists(filename):
-                        matched_files = glob.glob(os.path.join(temp_dir, f'yt_{video_id}.*'))
-                        if matched_files:
-                            filename = matched_files[0]
-                        else:
-                            raise Exception("Downloaded audio file not found on disk.")
-
-                    try:
-                        media_file = genai_client.files.upload(file=filename)
-                        
-                        while media_file.state.name == "PROCESSING":
-                            time.sleep(1)
-                            media_file = genai_client.files.get(name=media_file.name)
-                        
-                        if media_file.state.name == "FAILED":
-                            raise Exception("Audio file processing failed on Gemini.")
-
-                        response = genai_client.models.generate_content(
-                            model='gemini-2.5-flash',
-                            contents=[media_file, "Please transcribe the audio/dialogue in this video as accurately and completely as possible."]
-                        )
-                        transcript = response.text or ""
-                        
-                        genai_client.files.delete(name=media_file.name)
+                    if transcript_lines:
+                        transcript = "\n".join(transcript_lines)
                         return jsonify({'success': True, 'transcript': transcript})
-                    finally:
-                        if os.path.exists(filename):
-                            os.remove(filename)
-                except Exception as dl_err:
-                    print(f"yt-dlp fallback failed: {dl_err}")
-                    return jsonify({'error': (
-                        'YouTube blocks Google Cloud datacenter IP addresses from extracting transcripts or downloading streams. '
-                        'To import YouTube videos, please either:\n\n'
-                        '1. Run this app locally on your machine (where YouTube does not block your residential IP, allowing transcripts to import instantly), or\n'
-                        '2. Download the audio file of the video using a free tool and upload it here using the "Upload Local Audio File" button.'
-                    )}), 400
+                
+                raise Exception("API did not return a valid transcript structure (e.g. rate-limited).")
+            except Exception as yt_err:
+                print(f"youtube-transcript.ai API failed for {video_id}: {yt_err}")
+                # Fallback: Process the YouTube URL directly using Gemini's native multimodal capabilities
+                try:
+                    normalized_url = f"https://www.youtube.com/watch?v={video_id}"
+                    youtube_video = types.Part.from_uri(
+                        file_uri=normalized_url,
+                        mime_type='video/mp4'
+                    )
+                    response = genai_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[
+                            youtube_video,
+                            "Transcribe the audio of this video as accurately and completely as possible. Only return the transcript."
+                        ]
+                    )
+                    transcript = response.text or ""
+                    if not transcript:
+                        raise Exception("Gemini returned an empty transcript.")
+                    return jsonify({'success': True, 'transcript': transcript})
+                except Exception as gemini_err:
+                    print(f"Direct YouTube URL transcription failed: {gemini_err}")
+                    # Final Fallback: Download audio stream using yt-dlp (in case they have proxy config or run locally)
+                    try:
+                        import yt_dlp
+                        import tempfile
+                        import glob
+                        
+                        temp_dir = tempfile.gettempdir()
+                        outtmpl = os.path.join(temp_dir, f'yt_{video_id}.%(ext)s')
+                        
+                        ydl_opts = {
+                            'format': 'bestaudio/best',
+                            'outtmpl': outtmpl,
+                            'quiet': True,
+                            'no_warnings': True,
+                        }
+                        
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            info = ydl.extract_info(url, download=True)
+                            filename = ydl.prepare_filename(info)
+                        
+                        if not os.path.exists(filename):
+                            matched_files = glob.glob(os.path.join(temp_dir, f'yt_{video_id}.*'))
+                            if matched_files:
+                                filename = matched_files[0]
+                            else:
+                                raise Exception("Downloaded audio file not found on disk.")
+
+                        try:
+                            media_file = genai_client.files.upload(file=filename)
+                            
+                            while media_file.state.name == "PROCESSING":
+                                time.sleep(1)
+                                media_file = genai_client.files.get(name=media_file.name)
+                            
+                            if media_file.state.name == "FAILED":
+                                raise Exception("Audio file processing failed on Gemini.")
+
+                            response = genai_client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=[media_file, "Please transcribe the audio/dialogue in this video as accurately and completely as possible."]
+                            )
+                            transcript = response.text or ""
+                            
+                            genai_client.files.delete(name=media_file.name)
+                            return jsonify({'success': True, 'transcript': transcript})
+                        finally:
+                            if os.path.exists(filename):
+                                os.remove(filename)
+                    except Exception as dl_err:
+                        print(f"yt-dlp fallback failed: {dl_err}")
+                        return jsonify({'error': (
+                            f"Could not import YouTube video transcript. Direct Gemini processing error: {gemini_err}. "
+                            f"Downloading error: {dl_err}"
+                        )}), 400
         
         else:
             headers = {"User-Agent": "Mozilla/5.0"}
@@ -966,6 +1067,254 @@ def import_video_link():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pomodoro/log', methods=['POST'])
+def log_pomodoro():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.get_json() or {}
+    category = data.get('category', 'School').strip()
+    duration_minutes = data.get('duration_minutes', 25)
+    
+    if not category:
+        return jsonify({'error': 'Category is required'}), 400
+        
+    db = get_db()
+    try:
+        db.execute('''
+            INSERT INTO pomodoro_logs (user_id, category, duration_minutes)
+            VALUES (?, ?, ?)
+        ''', (session['user_id'], category, duration_minutes))
+        db.commit()
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pomodoro/stats', methods=['GET'])
+def get_pomodoro_stats():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    import datetime
+    month_str = request.args.get('month', datetime.datetime.now().strftime('%Y-%m'))
+    
+    db = get_db()
+    try:
+        # Fetch pomodoro logs for the month
+        p_logs = db.execute('''
+            SELECT category, duration_minutes, completed_at
+            FROM pomodoro_logs
+            WHERE user_id = ? AND completed_at LIKE ?
+            ORDER BY completed_at DESC
+        ''', (session['user_id'], f"{month_str}%")).fetchall()
+        
+        pomodoro_list = []
+        for r in p_logs:
+            pomodoro_list.append({
+                'category': r['category'],
+                'duration_minutes': r['duration_minutes'],
+                'completed_at': r['completed_at']
+            })
+            
+        # Fetch completed tasks for the month
+        t_completed = db.execute('''
+            SELECT id, title, category, completed_at
+            FROM tasks
+            WHERE user_id = ? AND completed = 1 AND completed_at LIKE ?
+            ORDER BY completed_at DESC
+        ''', (session['user_id'], f"{month_str}%")).fetchall()
+        
+        tasks_list = []
+        for r in t_completed:
+            tasks_list.append({
+                'id': r['id'],
+                'title': r['title'],
+                'category': r['category'],
+                'completed_at': r['completed_at']
+            })
+            
+        return jsonify({
+            'pomodoro_logs': pomodoro_list,
+            'completed_tasks': tasks_list
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pomodoro/compile-report', methods=['GET', 'POST'])
+def compile_report():
+    import datetime
+    from fpdf import FPDF
+    import tempfile
+    
+    # 1. Determine user type and get data
+    if request.method == 'POST':
+        # Guest mode (data sent in body)
+        data = request.get_json() or {}
+        month_str = data.get('month', datetime.datetime.now().strftime('%Y-%m'))
+        p_logs = data.get('pomodoro_logs', [])
+        t_completed = data.get('completed_tasks', [])
+    else:
+        # Logged-in mode
+        if 'user_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        month_str = request.args.get('month', datetime.datetime.now().strftime('%Y-%m'))
+        
+        db = get_db()
+        p_rows = db.execute('''
+            SELECT category, duration_minutes, completed_at
+            FROM pomodoro_logs
+            WHERE user_id = ? AND completed_at LIKE ?
+            ORDER BY completed_at ASC
+        ''', (session['user_id'], f"{month_str}%")).fetchall()
+        
+        p_logs = []
+        for r in p_rows:
+            p_logs.append({
+                'category': r['category'],
+                'duration_minutes': r['duration_minutes'],
+                'completed_at': r['completed_at']
+            })
+            
+        t_rows = db.execute('''
+            SELECT title, category, completed_at
+            FROM tasks
+            WHERE user_id = ? AND completed = 1 AND completed_at LIKE ?
+            ORDER BY completed_at ASC
+        ''', (session['user_id'], f"{month_str}%")).fetchall()
+        
+        t_completed = []
+        for r in t_rows:
+            t_completed.append({
+                'title': r['title'],
+                'category': r['category'],
+                'completed_at': r['completed_at']
+            })
+            
+    # Parse month name
+    try:
+        dt = datetime.datetime.strptime(month_str, '%Y-%m')
+        month_name = dt.strftime('%B %Y')
+    except:
+        month_name = month_str
+        
+    # 2. Compute stats
+    category_minutes = {}
+    total_minutes = 0
+    for r in p_logs:
+        cat = r.get('category', 'School')
+        mins = int(r.get('duration_minutes', 25))
+        category_minutes[cat] = category_minutes.get(cat, 0) + mins
+        total_minutes += mins
+        
+    total_hours = round(total_minutes / 60.0, 1)
+    
+    # 3. Create PDF
+    pdf = FPDF()
+    pdf.alias_nb_pages()
+    pdf.add_page()
+    
+    # Title
+    pdf.set_font('helvetica', 'B', 20)
+    pdf.set_text_color(46, 125, 50)
+    pdf.cell(0, 15, "Lily's Study Pond Report", ln=True, align='C')
+    pdf.set_font('helvetica', 'B', 12)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 10, f"Activity & Productivity Report: {month_name}", ln=True, align='C')
+    pdf.ln(10)
+    
+    # Overview
+    pdf.set_font('helvetica', 'B', 14)
+    pdf.set_text_color(33, 33, 33)
+    pdf.cell(0, 8, "Overview", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font('helvetica', '', 11)
+    pdf.cell(100, 8, f"Total Focus Hours: {total_hours} hrs", ln=False)
+    pdf.cell(0, 8, f"Total Pomodoro Sessions: {len(p_logs)}", ln=True)
+    pdf.cell(100, 8, f"Tasks Completed: {len(t_completed)}", ln=False)
+    pdf.cell(0, 8, f"Report Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
+    pdf.ln(8)
+    
+    # Category Breakdown
+    pdf.set_font('helvetica', 'B', 14)
+    pdf.cell(0, 8, "Focus Time by Category", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font('helvetica', 'B', 11)
+    pdf.cell(80, 8, "Category", border=1)
+    pdf.cell(50, 8, "Focus Time (minutes)", border=1)
+    pdf.cell(50, 8, "Focus Time (hours)", border=1, ln=True)
+    
+    pdf.set_font('helvetica', '', 11)
+    if not category_minutes:
+        pdf.cell(180, 8, "No focus sessions logged in this category/month.", border=1, ln=True, align='C')
+    else:
+        for cat, mins in sorted(category_minutes.items(), key=lambda x: x[1], reverse=True):
+            hrs = round(mins / 60.0, 1)
+            pdf.cell(80, 8, cat, border=1)
+            pdf.cell(50, 8, str(mins), border=1)
+            pdf.cell(50, 8, f"{hrs} hrs", border=1, ln=True)
+    pdf.ln(10)
+    
+    # Tasks Completed
+    pdf.set_font('helvetica', 'B', 14)
+    pdf.cell(0, 8, f"Tasks Completed in {month_name}", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font('helvetica', 'B', 11)
+    pdf.cell(100, 8, "Task Description", border=1)
+    pdf.cell(40, 8, "Category", border=1)
+    pdf.cell(40, 8, "Completed At", border=1, ln=True)
+    
+    pdf.set_font('helvetica', '', 10)
+    if not t_completed:
+        pdf.cell(180, 8, "No tasks completed in this month.", border=1, ln=True, align='C')
+    else:
+        for r in t_completed:
+            title = r.get('title', '')
+            cat = r.get('category', 'School')
+            comp_time = r.get('completed_at', '') or "N/A"
+            if len(title) > 45:
+                title = title[:42] + "..."
+            pdf.cell(100, 8, title, border=1)
+            pdf.cell(40, 8, cat, border=1)
+            pdf.cell(40, 8, comp_time[:16], border=1, ln=True)
+    pdf.ln(10)
+    
+    # Detailed Activity Log
+    pdf.set_font('helvetica', 'B', 14)
+    pdf.cell(0, 8, "Focus Session Log", ln=True)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(3)
+    
+    pdf.set_font('helvetica', 'B', 11)
+    pdf.cell(70, 8, "Completed Time", border=1)
+    pdf.cell(70, 8, "Category", border=1)
+    pdf.cell(40, 8, "Duration", border=1, ln=True)
+    
+    pdf.set_font('helvetica', '', 10)
+    if not p_logs:
+        pdf.cell(180, 8, "No focus sessions recorded.", border=1, ln=True, align='C')
+    else:
+        for r in p_logs:
+            comp_time = r.get('completed_at', '')
+            cat = r.get('category', 'School')
+            duration = f"{r.get('duration_minutes', 25)} min"
+            pdf.cell(70, 8, comp_time[:19], border=1)
+            pdf.cell(70, 8, cat, border=1)
+            pdf.cell(40, 8, duration, border=1, ln=True)
+            
+    temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    pdf.output(temp_pdf.name)
+    temp_pdf.close()
+    
+    filename = f"Froggy_Pomodoro_Report_{month_str}.pdf"
+    return send_file(temp_pdf.name, as_attachment=True, download_name=filename)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
