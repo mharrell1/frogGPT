@@ -23,3 +23,6 @@ push_to_github.py
 # Local development profiles
 chrome_profile/
 
+# Configuration and environment files
+.env
+*.env

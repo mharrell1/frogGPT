@@ -161,9 +161,9 @@ Rules:
     Section C — Short Answer: 3 questions (3 pts each)
 - Total points: 5 + 8 + 9 = 22 pts (adjust if user requests different weights).
 - Suggest a realistic time_limit_minutes (typically 30-45 min for this size).
-- True/False statements must be factually precise — avoid trick statements.
-- MCQ options labeled "A) ...", "B) ...", "C) ...", "D) ..."; correct_answer is the letter only.
-- Short answer questions should require 2-4 sentences; provide a model answer and 3-5 key grading points.
+- True/False statements must be factually precise — avoid trick statements. Set correct_answer to boolean true or false (do not use string "True" or "False").
+- MCQ options must contain exactly 4 choices, labeled "A) ...", "B) ...", "C) ...", "D) ...". Set correct_answer to the correct option letter only ("A", "B", "C", or "D").
+- Short answer questions should require 2-4 sentences; provide a model answer and a list of 3-5 key grading points.
 - Write clear student instructions.
 - Vary cognitive levels: recall, comprehension, application, and analysis.
 

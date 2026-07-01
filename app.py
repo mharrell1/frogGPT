@@ -455,7 +455,7 @@ def froggpt_chat():
         # 2. Gemini Pipeline (Default ADK)
         # Prepend imported notes if present
         if imported_content:
-            message_text = f"Imported Notes/Document Content:\n{imported_content}\n\nUser request: {message_text}"
+            message_text = f"Notes:\n{imported_content}\n\nRequest: {message_text}"
 
         allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro']
         if model_name not in allowed_models:
@@ -499,68 +499,80 @@ def froggpt_chat():
             import json
             
             for event in events:
-                if getattr(event, 'output', None) and isinstance(event.output, dict):
-                    author = getattr(event, 'author', '')
-                    out_json = json.dumps(event.output)
-                    res = {}
+                output_val = getattr(event, 'output', None)
+                if output_val is not None:
+                    # Convert Pydantic model to dict if necessary
+                    output_dict = None
+                    if isinstance(output_val, dict):
+                        output_dict = output_val
+                    elif hasattr(output_val, 'model_dump'):
+                        output_dict = output_val.model_dump()
+                    elif hasattr(output_val, 'dict'):
+                        output_dict = output_val.dict()
                     
-                    # 1. Prioritize strict author matching
-                    if author == 'quiz_agent':
-                        res = format_quiz_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'quiz_agent'
-                    elif author == 'flashcard_agent':
-                        res = format_flashcards_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'flashcard_agent'
-                    elif author == 'study_guide_agent':
-                        res = format_study_guide_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'study_guide_agent'
-                    elif author == 'test_agent':
-                        res = format_practice_test_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'test_agent'
-                    elif author == 'explain_agent':
-                        res = format_explanation_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'explain_agent'
-                            
-                    # 2. Fallbacks (only if author was not matched above)
-                    elif 'questions' in event.output and 'options' in str(event.output):
-                        res = format_quiz_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'quiz_agent'
-                    elif 'cards' in event.output:
-                        res = format_flashcards_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'flashcard_agent'
-                    elif 'sections' in event.output:
-                        res = format_study_guide_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'study_guide_agent'
-                    elif 'true_false' in event.output or 'multiple_choice' in event.output:
-                        res = format_practice_test_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'test_agent'
-                    elif 'simple_explanation' in event.output or 'analogy' in event.output:
-                        res = format_explanation_markdown(out_json)
-                        if res.get('status') == 'success':
-                            structured_data = event.output
-                            subagent_author = 'explain_agent'
-                    
-                    if res.get('status') == 'success' and res.get('markdown'):
-                        subagent_markdown = res['markdown']
-                        break
+                    if output_dict is not None and isinstance(output_dict, dict):
+                        author = getattr(event, 'author', '')
+                        out_json = json.dumps(output_dict)
+                        res = {}
+                        
+                        # 1. Prioritize strict author matching
+                        if author == 'quiz_agent':
+                            res = format_quiz_markdown(out_json)
+                            if res.get('status') == 'success':
+                                structured_data = output_dict
+                                subagent_author = 'quiz_agent'
+                        elif author == 'flashcard_agent':
+                            res = format_flashcards_markdown(out_json)
+                            if res.get('status') == 'success':
+                                structured_data = output_dict
+                                subagent_author = 'flashcard_agent'
+                        elif author == 'study_guide_agent':
+                            res = format_study_guide_markdown(out_json)
+                            if res.get('status') == 'success':
+                                structured_data = output_dict
+                                subagent_author = 'study_guide_agent'
+                        elif author == 'test_agent':
+                            res = format_practice_test_markdown(out_json)
+                            if res.get('status') == 'success':
+                                structured_data = output_dict
+                                subagent_author = 'test_agent'
+                        elif author == 'explain_agent':
+                            res = format_explanation_markdown(out_json)
+                            if res.get('status') == 'success':
+                                structured_data = output_dict
+                                subagent_author = 'explain_agent'
+                                
+                        # 2. Fallbacks (only if author was not matched above)
+                        if not subagent_author or res.get('status') != 'success':
+                            if 'questions' in output_dict and any('options' in str(q) for q in output_dict.get('questions', [])):
+                                res = format_quiz_markdown(out_json)
+                                if res.get('status') == 'success':
+                                    structured_data = output_dict
+                                    subagent_author = 'quiz_agent'
+                            elif 'cards' in output_dict:
+                                res = format_flashcards_markdown(out_json)
+                                if res.get('status') == 'success':
+                                    structured_data = output_dict
+                                    subagent_author = 'flashcard_agent'
+                            elif 'sections' in output_dict:
+                                res = format_study_guide_markdown(out_json)
+                                if res.get('status') == 'success':
+                                    structured_data = output_dict
+                                    subagent_author = 'study_guide_agent'
+                            elif 'true_false' in output_dict or 'multiple_choice' in output_dict:
+                                res = format_practice_test_markdown(out_json)
+                                if res.get('status') == 'success':
+                                    structured_data = output_dict
+                                    subagent_author = 'test_agent'
+                            elif 'simple_explanation' in output_dict or 'analogy' in output_dict:
+                                res = format_explanation_markdown(out_json)
+                                if res.get('status') == 'success':
+                                    structured_data = output_dict
+                                    subagent_author = 'explain_agent'
+                        
+                        if res.get('status') == 'success' and res.get('markdown'):
+                            subagent_markdown = res['markdown']
+                            break
         except Exception as fmt_err:
             print(f"Debug - error formatting subagent output: {fmt_err}")
 

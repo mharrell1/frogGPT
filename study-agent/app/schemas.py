@@ -138,8 +138,8 @@ class ShortAnswerTestQuestion(BaseModel):
 class TrueFalseTestQuestion(BaseModel):
     type: Literal["true_false"] = "true_false"
     statement: str = Field(description="A statement that is either true or false.")
-    correct_answer: Literal["True", "False"] = Field(
-        description="Whether the statement is True or False."
+    correct_answer: bool = Field(
+        description="Whether the statement is True or False (true or false)."
     )
     explanation: str = Field(description="Why the statement is true or false.")
     points: int = Field(description="Point value of this question.", default=1)

@@ -1002,6 +1002,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initial render calendar
     renderCalendar();
 
+    // Sync the quota indicators immediately on page load
+    updateQueryCounterUI();
 });
 
 /* --- Category Management Helpers --- */
@@ -2549,7 +2551,7 @@ function renderPracticeTest(container, test, isLibraryView = false) {
                     if (isSelected) optionClass += ' selected';
 
                     if (showResults) {
-                        const isCorrect = q.correct_answer.toLowerCase().trim() === opt.toLowerCase();
+                        const isCorrect = String(q.correct_answer).toLowerCase().trim() === opt.toLowerCase();
                         if (isCorrect) {
                             optionClass += ' correct-reveal';
                             if (isSelected) score++;
@@ -3217,8 +3219,15 @@ function getQueryCountForToday() {
     let quotaData = { date: todayStr, count: 0 };
     try {
         const stored = JSON.parse(localStorage.getItem('froggpt_query_quota'));
-        if (stored && stored.date === todayStr) {
-            quotaData = stored;
+        if (stored) {
+            if (stored.date === todayStr) {
+                quotaData = stored;
+            } else {
+                // The date has changed! Reset the stored quota data.
+                localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
+            }
+        } else {
+            localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
         }
     } catch (e) {
         console.error(e);
@@ -4747,17 +4756,30 @@ window.studyNotesWithFrogGPT = function(noteId, action) {
 
         function triggerAction(targetNote) {
             try {
+                // Set imported notes context globally
+                importedDocumentText = targetNote.notes || '';
+                importedDocumentName = targetNote.title || 'Note Context';
+
+                const badge = document.getElementById('froggpt-import-badge');
+                const badgeText = document.getElementById('froggpt-import-badge-text');
+                if (badgeText) {
+                    badgeText.innerText = `📎 Notes Imported: ${escapeHTML(importedDocumentName)} (${importedDocumentText.length} chars)`;
+                }
+                if (badge) {
+                    badge.classList.remove('hidden');
+                }
+
                 let promptText = '';
                 if (action === 'flashcards') {
-                    promptText = `Please delegate to the flashcard_agent to generate a structured flashcard deck from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                    promptText = `Generate flashcards`;
                 } else if (action === 'quiz') {
-                    promptText = `Please delegate to the quiz_agent to generate a multiple-choice practice quiz from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                    promptText = `Generate quiz`;
                 } else if (action === 'test') {
-                    promptText = `Please delegate to the test_agent to generate a comprehensive mixed-format practice test from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                    promptText = `Generate practice test`;
                 } else if (action === 'guide') {
-                    promptText = `Please delegate to the study_guide_agent to generate a comprehensive study guide from these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}`;
+                    promptText = `Generate study guide`;
                 } else if (action === 'chat') {
-                    promptText = `I have some questions about these notes: "${targetNote.title}"\n\nNotes Content:\n${targetNote.notes}\n\nPlease read them and let me know if you are ready to answer my questions!`;
+                    promptText = `Ask questions`;
                 }
 
                 // Close modal
