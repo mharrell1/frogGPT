@@ -205,10 +205,53 @@ def init_db():
         db.execute("ALTER TABLE tasks ADD COLUMN notes TEXT")
     if 'completed_at' not in columns:
         db.execute("ALTER TABLE tasks ADD COLUMN completed_at TIMESTAMP")
+        
+    # Create daily_quota_calls table
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS daily_quota_calls (
+            date_str TEXT PRIMARY KEY,
+            calls_count INTEGER DEFAULT 0
+        )
+    ''')
     db.commit()
+
+# Quota counting helper functions
+import datetime
+
+def get_server_date_str():
+    # Return date string format: Fri Jul 03 2026 (matching toDateString in JS)
+    return datetime.date.today().strftime('%a %b %d %Y')
+
+def get_daily_quota_count():
+    db = get_db()
+    date_str = get_server_date_str()
+    cursor = db.execute("SELECT calls_count FROM daily_quota_calls WHERE date_str = ?", (date_str,))
+    row = cursor.fetchone()
+    if row:
+        return row['calls_count']
+    return 0
+
+def increment_daily_quota_count(amount=1):
+    db = get_db()
+    date_str = get_server_date_str()
+    current = get_daily_quota_count()
+    new_count = current + amount
+    db.execute(
+        "INSERT OR REPLACE INTO daily_quota_calls (date_str, calls_count) VALUES (?, ?)",
+        (date_str, new_count)
+    )
+    db.commit()
+    return new_count
 
 with app.app_context():
     init_db()
+
+@app.route('/api/quota/count', methods=['GET'])
+def quota_count():
+    try:
+        return jsonify({'success': True, 'count': get_daily_quota_count()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/')
 def index():
@@ -495,6 +538,17 @@ def froggpt_chat():
         except Exception as e:
             return jsonify({'error': f'Failed to create session: {e}'}), 500
 
+    # Check server-side daily quota limit first
+    if get_daily_quota_count() >= 20:
+        return jsonify({
+            'success': True,
+            'response': "⚠️ **Daily Free Quota Exceeded (20/20)**\n\n🐸 Lily's daily free tier quota has been reached. Please wait until tomorrow or host your own API key to continue!",
+            'session_id': session_id,
+            'structured_data': None,
+            'subagent_author': None,
+            'calls_made': 0
+        })
+
 
 
     try:
@@ -676,6 +730,8 @@ def froggpt_chat():
         if agents_used == 0:
             agents_used = 2 if subagent_author else 1
 
+        increment_daily_quota_count(agents_used)
+
         return jsonify({
             'success': True,
             'response': final_response_text,
@@ -692,6 +748,7 @@ def froggpt_chat():
         if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
             # If it failed, check gemini calls count to estimate if it delegated to a subagent before failing
             agents_used = 2 if getattr(g, 'gemini_calls_count', 0) > 1 else 1
+            increment_daily_quota_count(agents_used)
             return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id, 'calls_made': agents_used})
         return jsonify({'error': str(e)}), 500
     finally:
@@ -813,6 +870,10 @@ def notes_transcribe():
     if not active_client:
         return jsonify({'error': 'Gemini API client not initialized. Ensure GEMINI_API_KEY is configured.'}), 500
 
+    # Check server-side daily quota limit first
+    if get_daily_quota_count() >= 20:
+        return jsonify({'error': 'Daily free quota exceeded (20/20).'}), 429
+
     if 'audio' not in request.files:
         return jsonify({'error': 'No audio file provided'}), 400
 
@@ -837,14 +898,22 @@ def notes_transcribe():
         )
         
         transcript = response.text or ""
+        increment_daily_quota_count(1)
         return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # If it failed due to a quota limit error, still count it as attempted
+        err_str = str(e)
+        if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
+            increment_daily_quota_count(1)
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/notes/summarize', methods=['POST'])
 def notes_summarize():
+    # Check server-side daily quota limit first
+    if get_daily_quota_count() >= 20:
+        return jsonify({'error': 'Daily free quota exceeded (20/20).'}), 429
+
     active_client = genai_client
     if not active_client:
         return jsonify({'error': 'Gemini API client not initialized. Ensure GEMINI_API_KEY is configured.'}), 500
@@ -883,10 +952,15 @@ def notes_summarize():
             contents=prompt
         )
         notes = response.text or ""
+        increment_daily_quota_count(1)
         return jsonify({'success': True, 'notes': notes, 'calls_made': 1})
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # If it failed due to a quota limit error, still count it as attempted
+        err_str = str(e)
+        if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
+            increment_daily_quota_count(1)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/notes/export', methods=['POST'])
@@ -963,6 +1037,10 @@ def import_video_link():
 
     data = request.get_json() or {}
     url = data.get('url', '').strip()
+
+    # Check server-side daily quota limit first
+    if get_daily_quota_count() >= 20:
+        return jsonify({'error': 'Daily free quota exceeded (20/20).'}), 429
 
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
@@ -1048,6 +1126,7 @@ def import_video_link():
                     transcript = response.text or ""
                     if not transcript:
                         raise Exception("Gemini returned an empty transcript.")
+                    increment_daily_quota_count(1)
                     return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
                 except Exception as gemini_err:
                     print(f"Direct YouTube URL transcription failed: {gemini_err}")
@@ -1095,6 +1174,7 @@ def import_video_link():
                             transcript = response.text or ""
                             
                             genai_client.files.delete(name=media_file.name)
+                            increment_daily_quota_count(1)
                             return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
                         finally:
                             if os.path.exists(filename):
@@ -1134,6 +1214,7 @@ def import_video_link():
                 transcript = response.text or ""
                 
                 genai_client.files.delete(name=media_file.name)
+                increment_daily_quota_count(1)
                 return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
             finally:
                 if os.path.exists(temp_path):

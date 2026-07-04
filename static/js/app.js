@@ -995,7 +995,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderCalendar();
 
     // Sync the quota indicators immediately on page load
-    updateQueryCounterUI();
+    syncQuotaWithServer();
 });
 
 /* --- Category Management Helpers --- */
@@ -3242,6 +3242,25 @@ function incrementQueryCount(amount) {
     localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
     updateQueryCounterUI();
 }
+
+async function syncQuotaWithServer() {
+    try {
+        const res = await fetch('/api/quota/count');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && typeof data.count === 'number') {
+                const today = new Date();
+                const todayStr = today.toDateString();
+                const quotaData = { date: todayStr, count: data.count };
+                localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
+            }
+        }
+    } catch (e) {
+        console.error("Error syncing quota with server:", e);
+    }
+    updateQueryCounterUI();
+}
+window.syncQuotaWithServer = syncQuotaWithServer;
 
 let quotaResetInterval = null;
 

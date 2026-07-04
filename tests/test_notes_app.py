@@ -220,5 +220,30 @@ def test_quota_accurate_counting(client):
         assert res_data['success'] is True
         assert res_data['calls_made'] == 1
 
+def test_server_quota_limit(client):
+    """Test that the server rejects requests when the daily quota of 20 is reached."""
+    # Reset/set quota in DB to 20
+    with flask_app.app.app_context():
+        db = flask_app.get_db()
+        date_str = flask_app.get_server_date_str()
+        db.execute("INSERT OR REPLACE INTO daily_quota_calls (date_str, calls_count) VALUES (?, 20)", (date_str,))
+        db.commit()
+
+    # Try transcription - should return 429
+    data = {
+        'audio': (io.BytesIO(b"audio"), 'test.webm')
+    }
+    res = client.post('/api/notes/transcribe', data=data, content_type='multipart/form-data')
+    assert res.status_code == 429
+    res_data = json.loads(res.data.decode('utf-8'))
+    assert 'error' in res_data
+    assert 'quota exceeded' in res_data['error'].lower()
+
+    # Reset DB after test
+    with flask_app.app.app_context():
+        db = flask_app.get_db()
+        db.execute("DELETE FROM daily_quota_calls WHERE date_str = ?", (date_str,))
+        db.commit()
+
 
 
