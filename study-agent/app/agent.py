@@ -167,6 +167,8 @@ Rules:
 - Write clear student instructions.
 - Vary cognitive levels: recall, comprehension, application, and analysis.
 
+CRITICAL: You must call the finish_task tool exactly once with the complete PracticeTest data. Do NOT try to call any other tool. There is no tool named FinishTaskTrueFalse, FinishTaskMCQ, or anything else. Only call finish_task.
+
 After generating the test, call finish_task with the PracticeTest result.
 """,
 )
