@@ -668,6 +668,10 @@ def froggpt_chat():
                 full_text = f"⚠️ **Google AI Studio Rate Limit / No Response**\n\n🐸 Lily couldn't generate a text response. This usually happens when the Gemini API free tier rate limit (`429 Resource Exhausted`) is reached during a multi-agent workflow.\n\n`Debug Info: {events_str}`\n\n⏳ **Fix**: Please wait about 60 seconds and try asking again!"
 
         final_response_text = getattr(g, 'fallback_prefix', '') + full_text
+        # Determine number of agents used:
+        # 1 coordinator agent ('study_agent') is always used.
+        # If subagent_author is set, a specialist agent was also used, making it 2 agents.
+        agents_used = 2 if subagent_author else 1
 
         return jsonify({
             'success': True,
@@ -675,7 +679,7 @@ def froggpt_chat():
             'session_id': session_id,
             'structured_data': structured_data,
             'subagent_author': subagent_author,
-            'calls_made': getattr(g, 'gemini_calls_count', 0)
+            'calls_made': agents_used
         })
     except Exception as e:
         import traceback
@@ -683,7 +687,9 @@ def froggpt_chat():
         # Check if the exception itself is a quota error
         err_str = str(e)
         if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
-            return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+            # If it failed, check gemini calls count to estimate if it delegated to a subagent before failing
+            agents_used = 2 if getattr(g, 'gemini_calls_count', 0) > 1 else 1
+            return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id, 'calls_made': agents_used})
         return jsonify({'error': str(e)}), 500
     finally:
         # Restore original cached clients
@@ -828,7 +834,7 @@ def notes_transcribe():
         )
         
         transcript = response.text or ""
-        return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+        return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -874,7 +880,7 @@ def notes_summarize():
             contents=prompt
         )
         notes = response.text or ""
-        return jsonify({'success': True, 'notes': notes, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+        return jsonify({'success': True, 'notes': notes, 'calls_made': 1})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1017,7 +1023,7 @@ def import_video_link():
                     
                     if transcript_lines:
                         transcript = "\n".join(transcript_lines)
-                        return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+                        return jsonify({'success': True, 'transcript': transcript, 'calls_made': 0})
                 
                 raise Exception("API did not return a valid transcript structure (e.g. rate-limited).")
             except Exception as yt_err:
@@ -1039,7 +1045,7 @@ def import_video_link():
                     transcript = response.text or ""
                     if not transcript:
                         raise Exception("Gemini returned an empty transcript.")
-                    return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+                    return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
                 except Exception as gemini_err:
                     print(f"Direct YouTube URL transcription failed: {gemini_err}")
                     # Final Fallback: Download audio stream using yt-dlp (in case they have proxy config or run locally)
@@ -1086,7 +1092,7 @@ def import_video_link():
                             transcript = response.text or ""
                             
                             genai_client.files.delete(name=media_file.name)
-                            return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+                            return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
                         finally:
                             if os.path.exists(filename):
                                 os.remove(filename)
@@ -1125,7 +1131,7 @@ def import_video_link():
                 transcript = response.text or ""
                 
                 genai_client.files.delete(name=media_file.name)
-                return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
+                return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
             finally:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
