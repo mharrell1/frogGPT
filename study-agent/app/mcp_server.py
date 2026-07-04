@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Froggy Pomodoro Database MCP Server.
+FrogGPT Database MCP Server.
 
 This MCP server acts as the data-access layer ("reach") for the ADK study agent,
 exposing tools to fetch tasks, create tasks, complete tasks, and retrieve pomodoro
@@ -29,10 +29,10 @@ from mcp.server.fastmcp import FastMCP
 
 # Setup clean logging to stderr to avoid interfering with stdio communication protocol
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
-logger = logging.getLogger("froggy_mcp_server")
+logger = logging.getLogger("froggpt_mcp_server")
 
 # Initialize the FastMCP Server
-mcp = FastMCP("Froggy Pomodoro Database Server")
+mcp = FastMCP("FrogGPT Database Server")
 
 # Resolve SQLite database path
 PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

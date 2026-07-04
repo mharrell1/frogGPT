@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Initialize ADK frogGPT runner if study-agent is available
 froggpt_runner = None
 froggpt_session_service = None
+froggpt_init_error = None
 
 try:
     study_agent_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'study-agent')
@@ -71,6 +72,13 @@ try:
     print("Successfully initialized frogGPT ADK Runner.")
 except Exception as e:
     import traceback
+    adk_ver = "unknown"
+    try:
+        import importlib.metadata
+        adk_ver = importlib.metadata.version('google-adk')
+    except Exception:
+        pass
+    froggpt_init_error = f"[adk-version: {adk_ver}] " + traceback.format_exc()
     traceback.print_exc()
 # Initialize Google GenAI client directly using API key
 genai_client = None
@@ -86,9 +94,52 @@ try:
 except Exception as e:
     print(f"Failed to initialize Google GenAI Client: {e}")
 
+# ---------------------------------------------------------------------------
+# Monkey patch google-genai Client models service to track exact API call count
+# ---------------------------------------------------------------------------
+try:
+    from google.genai.models import Models, AsyncModels
+    from flask import has_request_context, g
+
+    def track_api_call():
+        if has_request_context():
+            g.gemini_calls_count = getattr(g, 'gemini_calls_count', 0) + 1
+
+    # Patched generate_content
+    orig_generate_content = Models.generate_content
+    def patched_generate_content(self, *args, **kwargs):
+        track_api_call()
+        return orig_generate_content(self, *args, **kwargs)
+    Models.generate_content = patched_generate_content
+
+    # Patched generate_content_stream
+    orig_generate_content_stream = Models.generate_content_stream
+    def patched_generate_content_stream(self, *args, **kwargs):
+        track_api_call()
+        return orig_generate_content_stream(self, *args, **kwargs)
+    Models.generate_content_stream = patched_generate_content_stream
+
+    # Patched async generate_content
+    orig_async_generate_content = AsyncModels.generate_content
+    async def patched_async_generate_content(self, *args, **kwargs):
+        track_api_call()
+        return await orig_async_generate_content(self, *args, **kwargs)
+    AsyncModels.generate_content = patched_async_generate_content
+
+    # Patched async generate_content_stream
+    orig_async_generate_content_stream = AsyncModels.generate_content_stream
+    async def patched_async_generate_content_stream(self, *args, **kwargs):
+        track_api_call()
+        return await orig_async_generate_content_stream(self, *args, **kwargs)
+    AsyncModels.generate_content_stream = patched_async_generate_content_stream
+
+    print("Successfully monkey-patched google-genai Models to track quota.")
+except Exception as e:
+    print(f"Failed to monkey-patch google-genai Models: {e}")
+
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'froggy-secret-key-12345')
-app.config['SESSION_COOKIE_NAME'] = 'froggy_session'
+app.secret_key = os.environ.get('SECRET_KEY', 'froggpt-secret-key-12345')
+app.config['SESSION_COOKIE_NAME'] = 'froggpt_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -413,7 +464,10 @@ def froggpt_import_file():
 @app.route('/api/froggpt', methods=['POST'])
 def froggpt_chat():
     if not froggpt_runner or not froggpt_session_service:
-        return jsonify({'error': 'frogGPT is not initialized properly. Check server logs and environment variables.'}), 500
+        err_msg = 'frogGPT is not initialized properly. Check server logs and environment variables.'
+        if froggpt_init_error:
+            err_msg += f" Details: {froggpt_init_error}"
+        return jsonify({'error': err_msg}), 500
 
     data = request.get_json() or {}
     message_text = data.get('message', '').strip()
@@ -620,7 +674,8 @@ def froggpt_chat():
             'response': final_response_text,
             'session_id': session_id,
             'structured_data': structured_data,
-            'subagent_author': subagent_author
+            'subagent_author': subagent_author,
+            'calls_made': getattr(g, 'gemini_calls_count', 0)
         })
     except Exception as e:
         import traceback
@@ -628,7 +683,7 @@ def froggpt_chat():
         # Check if the exception itself is a quota error
         err_str = str(e)
         if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
-            return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id})
+            return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
         return jsonify({'error': str(e)}), 500
     finally:
         # Restore original cached clients
@@ -773,7 +828,7 @@ def notes_transcribe():
         )
         
         transcript = response.text or ""
-        return jsonify({'success': True, 'transcript': transcript})
+        return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -819,7 +874,7 @@ def notes_summarize():
             contents=prompt
         )
         notes = response.text or ""
-        return jsonify({'success': True, 'notes': notes})
+        return jsonify({'success': True, 'notes': notes, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -962,7 +1017,7 @@ def import_video_link():
                     
                     if transcript_lines:
                         transcript = "\n".join(transcript_lines)
-                        return jsonify({'success': True, 'transcript': transcript})
+                        return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
                 
                 raise Exception("API did not return a valid transcript structure (e.g. rate-limited).")
             except Exception as yt_err:
@@ -984,7 +1039,7 @@ def import_video_link():
                     transcript = response.text or ""
                     if not transcript:
                         raise Exception("Gemini returned an empty transcript.")
-                    return jsonify({'success': True, 'transcript': transcript})
+                    return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
                 except Exception as gemini_err:
                     print(f"Direct YouTube URL transcription failed: {gemini_err}")
                     # Final Fallback: Download audio stream using yt-dlp (in case they have proxy config or run locally)
@@ -1031,7 +1086,7 @@ def import_video_link():
                             transcript = response.text or ""
                             
                             genai_client.files.delete(name=media_file.name)
-                            return jsonify({'success': True, 'transcript': transcript})
+                            return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
                         finally:
                             if os.path.exists(filename):
                                 os.remove(filename)
@@ -1070,7 +1125,7 @@ def import_video_link():
                 transcript = response.text or ""
                 
                 genai_client.files.delete(name=media_file.name)
-                return jsonify({'success': True, 'transcript': transcript})
+                return jsonify({'success': True, 'transcript': transcript, 'calls_made': getattr(g, 'gemini_calls_count', 0)})
             finally:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
@@ -1325,7 +1380,7 @@ def compile_report():
     pdf.output(temp_pdf.name)
     temp_pdf.close()
     
-    filename = f"Froggy_Pomodoro_Report_{month_str}.pdf"
+    filename = f"FrogGPT_Report_{month_str}.pdf"
     return send_file(temp_pdf.name, as_attachment=True, download_name=filename)
 
 if __name__ == '__main__':

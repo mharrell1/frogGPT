@@ -1,6 +1,6 @@
-# 🐸 Froggy Pomodoro — Study, Relax & Hop
+# 🐸 FrogGPT — Study, Relax & Hop
 
-Welcome to **Froggy Pomodoro**, a cozy and aesthetic productivity web application designed to help you stay focused, manage tasks, and listen to relaxing music alongside Lily, your study-frog mascot.
+Welcome to **FrogGPT**, a cozy and aesthetic productivity web application designed to help you stay focused, manage tasks, and listen to relaxing music alongside Lily, your study-frog mascot.
 
 ---
 
@@ -30,12 +30,12 @@ Welcome to **Froggy Pomodoro**, a cozy and aesthetic productivity web applicatio
 
 ### 🎮 4. Cozy Game Arcade & Study Games (Full-Page Playground!)
 * **Cozy Destress Games:** Accessed via the game controller icon (`🎮`) in the left panel sidebar. Takes up the full viewport window.
-* **Froggy 2048 Theme:** Play a cozy themed version of the classic 2048 game using custom pastel colors, culminating in a special **"2048 🐸"** tile.
+* **FrogGPT 2048 Theme:** Play a cozy themed version of the classic 2048 game using custom pastel colors, culminating in a special **"2048 🐸"** tile.
 * **Matching Study Game:** Match terms and definitions from your selected deck side-by-side in a race against time! Cards automatically fade when matched.
 * **Asteroid Blaster Study Game:** Aim and blast arriving asteroids containing definitions by matching them with the correct term loaded on your blaster.
 * **Saves High Score:** Automatically saves your highest score locally (`bestScore2048` stored in `localStorage`).
 
-### 📻 5. Froggy Pond Radio (Spotify Integration)
+### 📻 5. FrogGPT Pond Radio (Spotify Integration)
 * **Curated Stations:** Quick-switch between four pre-configured ambient playlists (Lofi Focus Beats, Peaceful Piano, Nature Rain Sounds, and Nintendo & Chill).
 * **Load Custom Music:** Paste any Spotify track, album, or playlist link to load it dynamically into the built-in media widget.
 * **Animated Interactions:** When music starts playing, Lily puts on headphones, bobs her head to the beat, and floating music notes drift across the screen!
@@ -94,7 +94,7 @@ Make sure you have Python 3 installed on your system.
 
 1. **Clone or Navigate to the directory:**
    ```bash
-   cd /Users/makaelaharrell/agy-cli-projects/froggy-pomodoro
+   cd /Users/makaelaharrell/agy-cli-projects/frogGPT
    ```
 
 2. **Install Dependencies:**
@@ -104,7 +104,7 @@ Make sure you have Python 3 installed on your system.
 
 3. **Start the Flask Server:**
    ```bash
-   python3 app.py
+   python3 main.py
    ```
 
 4. **Access the Web App:**
@@ -113,7 +113,7 @@ Make sure you have Python 3 installed on your system.
 ### ☁️ Cloud Deployment (Google Cloud Run)
 
 The application is deployed to Google Cloud Run and operates 24/7. You can access it directly at:
-**👉 [https://froggy-pomodoro-170395053839.us-central1.run.app](https://froggy-pomodoro-170395053839.us-central1.run.app)**
+**👉 [https://froggpt-170395053839.us-central1.run.app](https://froggpt-170395053839.us-central1.run.app)**
 
 To deploy your own copy of the app:
 
@@ -122,7 +122,7 @@ To deploy your own copy of the app:
 3. **Create GCS Bucket**: Create a GCS bucket to store your SQLite database.
 4. **Deploy**:
    ```bash
-   gcloud run deploy froggy-pomodoro \
+   gcloud run deploy froggpt \
      --source . \
      --region us-central1 \
      --execution-environment gen2 \
@@ -136,14 +136,14 @@ To deploy your own copy of the app:
 
 ## 🏛️ System Architecture
 
-Froggy Pomodoro is designed as a modular, decoupled application separating the user-facing web layer, the agentic reasoning coordinator, and the secure data-access layer.
+FrogGPT is designed as a modular, decoupled application separating the user-facing web layer, the agentic reasoning coordinator, and the secure data-access layer.
 
 ```mermaid
 graph TD
     User([User / Browser]) <-->|HTTP / WebSockets| Flask[Flask Web App]
     Flask <-->|Direct SQLite Connection| DB[(tasks.db)]
     
-    subgraph Multi-Agent System (ADK 2.0)
+    subgraph "Multi-Agent System (ADK 2.0)"
         Flask <-->|Runner.run| RootAgent[study_agent (Coordinator)]
         RootAgent <-->|Task Delegation| Flashcard[flashcard_agent]
         RootAgent <-->|Task Delegation| Quiz[quiz_agent]
@@ -152,14 +152,14 @@ graph TD
         RootAgent <-->|Task Delegation| Guide[study_guide_agent]
     end
 
-    subgraph MCP Server Integration
+    subgraph "MCP Server Integration"
         RootAgent <-->|Stdio / JSON-RPC| MCP[MCP Database Server]
         MCP <-->|SQLite Query / Mutation| DB
     end
 ```
 
 ### Component Breakdown
-1. **Frontend / Flask App (`app.py` / `templates` / `static`)**: Manages the Pomodoro timer state machine, Spotify audio sync, Web Audio sounds, and provides a cozy Web UI. It forwards chat requests to the ADK `Runner` and automatically maps user sessions.
+1. **Frontend / Flask App (`main.py` / `templates` / `static`)**: Manages the Pomodoro timer state machine, Spotify audio sync, Web Audio sounds, and provides a cozy Web UI. It forwards chat requests to the ADK `Runner` and automatically maps user sessions.
 2. **ADK Coordinator (`study_agent`)**: The central routing node. Depending on the intent, it either invokes sub-agents to generate study materials or communicates with the database MCP server to perform task/timer updates.
 3. **MCP Database Server (`study-agent/app/mcp_server.py`)**: Exposes the SQLite database as structured tools using the Model Context Protocol standard over `stdio`.
 4. **Specialist Sub-agents (`agent.py`)**: Multi-turn task-mode agents that convert text/notes into structured schemas (flashcards, quizzes, tests, study guides).
@@ -170,7 +170,7 @@ graph TD
 
 We have implemented and demonstrated the following core concepts from the Google & Kaggle AI Agents Intensive Course:
 
-### 1. Agent & Multi-agent System (ADK) — Demonstrated in [agent.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/agent.py)
+### 1. Agent & Multi-agent System (ADK) — Demonstrated in [agent.py](file:///Users/makaelaharrell/agy-cli-projects/frogGPT/study-agent/app/agent.py)
 * Built using the **Google Agent Development Kit (ADK 2.0)**.
 * Implements a **coordinator/specialist topology** where the coordinator (`root_agent`) processes natural language requests and delegates structured generation tasks (`mode="task"`) to one of five sub-agents:
   * `flashcard_agent` (structured active recall Q&As)
@@ -179,7 +179,7 @@ We have implemented and demonstrated the following core concepts from the Google
   * `test_agent` (practice tests with mixed format)
   * `explain_agent` (simplifications and metaphors)
 
-### 2. MCP Server (Model Context Protocol) — Demonstrated in [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/mcp_server.py)
+### 2. MCP Server (Model Context Protocol) — Demonstrated in [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/frogGPT/study-agent/app/mcp_server.py)
 * Developed a custom Python MCP server using the official **FastMCP SDK**.
 * The server exposes database query and mutation interfaces as standardized tools:
   * `get_user_tasks` (retrieves a user's items)
@@ -188,7 +188,7 @@ We have implemented and demonstrated the following core concepts from the Google
   * `get_pomodoro_stats` (aggregates Pomodoro logs)
 * The ADK agent connects to this server dynamically as an **MCP Client** using `StdioConnectionParams` and `StdioServerParameters`, launching the server as a subprocess and utilizing standard JSON-RPC communication.
 
-### 3. Security Features — Demonstrated in [app.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/app.py) & [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/froggy-pomodoro/study-agent/app/mcp_server.py)
+### 3. Security Features — Demonstrated in [main.py](file:///Users/makaelaharrell/agy-cli-projects/frogGPT/main.py) & [mcp_server.py](file:///Users/makaelaharrell/agy-cli-projects/frogGPT/study-agent/app/mcp_server.py)
 * **Hashed Authentication**: User passwords are saved and validated using secure scrypt hashing (`generate_password_hash` / `check_password_hash` from `werkzeug.security`).
 * **Input Sanitization**: The MCP database tools validate and sanitize all user-supplied query text (`sanitize_string`) to mitigate SQL injection vectors.
 * **Access Control / Ownership Checks**: DB mutations enforce strict ownership rules (`WHERE id = ? AND user_id = ?`) to prevent Horizontal Privilege Escalation (e.g. preventing users from deleting other users' tasks).
@@ -202,7 +202,7 @@ We have implemented and demonstrated the following core concepts from the Google
 
 ## 📂 File Structure
 
-* `app.py` — Flask server and SQLite REST API endpoints.
+* `main.py` — Flask server and SQLite REST API endpoints.
 * `templates/index.html` — Main layout.
 * `static/css/style.css` — Custom styles, animations, and responsive layout.
 * `static/js/app.js` — Timer state machine, Spotify link parser, and audio synthesis engine.

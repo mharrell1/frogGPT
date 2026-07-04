@@ -294,7 +294,7 @@ const LILY_SPEECH = {
     welcome: [
         "Welcome to the pond! Let's get cozy and make progress together, ribbit!",
         "Hoppy studying! Remember to take deep breaths and stretch your legs.",
-        "Need a cozy vibe? Select a playlist from Froggy Pond Radio below!"
+        "Need a cozy vibe? Select a playlist from FrogGPT Pond Radio below!"
     ],
     workStart: [
         "Focus mode active! Time to work on your tasks, ribbit!",
@@ -354,7 +354,7 @@ function updateTimerDisplay() {
     updateProgress(progressPercent);
 
     // Update document title for easy tracking in tabs
-    document.title = `(${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}) Froggy Pomodoro`;
+    document.title = `(${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}) FrogGPT`;
 }
 
 function initTimerValues() {
@@ -464,7 +464,7 @@ function resetTimer() {
     document.getElementById('session-counter').textContent = `Session 1 of ${totalSessions}`;
     resetTimerButtons();
     updateTimerDisplay();
-    document.title = "Froggy Pomodoro - Study, Relax & Hop";
+    document.title = "FrogGPT - Study, Relax & Hop";
 }
 
 
@@ -1513,13 +1513,21 @@ function updateAuthUI() {
         if (authLoggedOut) authLoggedOut.style.display = 'none';
         if (authLoggedIn) authLoggedIn.style.display = 'block';
         if (loggedInUsername) loggedInUsername.textContent = loggedInUser;
-        if (btnHistory) btnHistory.style.display = 'inline-block';
+        if (btnHistory) {
+            btnHistory.style.display = 'inline-block';
+            btnHistory.innerText = '📜 Session History';
+            btnHistory.style.opacity = '1.0';
+        }
     } else {
         if (btnSync) btnSync.classList.remove('active');
         if (syncStatusText) syncStatusText.textContent = 'Sign In';
         if (authLoggedOut) authLoggedOut.style.display = 'block';
         if (authLoggedIn) authLoggedIn.style.display = 'none';
-        if (btnHistory) btnHistory.style.display = 'none';
+        if (btnHistory) {
+            btnHistory.style.display = 'inline-block';
+            btnHistory.innerText = '🔒 Session History';
+            btnHistory.style.opacity = '0.6';
+        }
     }
 }
 
@@ -2036,7 +2044,7 @@ async function sendFrogGPTMessage(messageText) {
         if (response.ok) {
             const data = await response.json();
             
-            incrementQueryCount();
+            incrementQueryCount(data.calls_made);
 
             if (data.session_id) {
                 frogGPTSessionId = data.session_id;
@@ -3227,9 +3235,10 @@ function getQueryCountForToday() {
     return quotaData;
 }
 
-function incrementQueryCount() {
+function incrementQueryCount(amount) {
     const quotaData = getQueryCountForToday();
-    quotaData.count += 1;
+    const parsedAmount = parseInt(amount, 10);
+    quotaData.count += isNaN(parsedAmount) ? 1 : parsedAmount;
     localStorage.setItem('froggpt_query_quota', JSON.stringify(quotaData));
     updateQueryCounterUI();
 }
@@ -3268,22 +3277,34 @@ function updateQueryCounterUI() {
 
     if (noteCounterElem) {
         noteCounterElem.innerText = `${quotaData.count} / 20`;
-            if (quotaData.count >= 20) {
-                noteCounterElem.style.color = '#ff595e';
-                noteCounterElem.style.background = 'rgba(255, 89, 94, 0.1)';
-                startQuotaCountdown();
-            } else {
-                noteCounterElem.style.color = 'var(--color-mint)';
-                noteCounterElem.style.background = 'rgba(135, 195, 143, 0.1)';
-                if (noteDisclaimerElem) {
-                    noteDisclaimerElem.innerHTML = `
+        if (quotaData.count >= 20) {
+            noteCounterElem.style.color = '#ff595e';
+            noteCounterElem.style.background = 'rgba(255, 89, 94, 0.1)';
+            startQuotaCountdown();
+        } else {
+            noteCounterElem.style.color = 'var(--color-mint)';
+            noteCounterElem.style.background = 'rgba(135, 195, 143, 0.1)';
+            if (noteDisclaimerElem) {
+                const pct = Math.min((quotaData.count / 20) * 100, 100);
+                const durationVal = window.noteDurationText || "";
+                const displayStyle = durationVal ? "inline-block" : "none";
+                noteDisclaimerElem.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
-                        <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135, 195, 143, 0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
-                    `;
-                }
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="note-recording-duration" style="color: var(--color-mint); font-weight: bold; display: ${displayStyle};">${durationVal}</span>
+                            <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135, 195, 143, 0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
+                        </div>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
+                        <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, var(--color-mint) 0%, #ff595e 100%); transition: width 0.4s ease;"></div>
+                    </div>
+                `;
             }
         }
     }
+}
 
 function startQuotaCountdown() {
     const disclaimerElem = document.querySelector('.froggpt-quota-disclaimer');
@@ -3318,9 +3339,21 @@ function startQuotaCountdown() {
             `;
         }
         if (noteDisclaimerElem) {
+            const pct = Math.min((quotaData.count / 20) * 100, 100);
+            const durationVal = window.noteDurationText || "";
+            const displayStyle = durationVal ? "inline-block" : "none";
             noteDisclaimerElem.innerHTML = `
-                <span>⚠️ Quota Exhausted! Resets in <strong>${timeStr}</strong></span>
-                <span id="note-quota-counter" style="color: #ff595e; font-weight: bold; background: rgba(255,89,94,0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <span>⚠️ Quota Exhausted! Resets in <strong>${timeStr}</strong></span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="note-recording-duration" style="color: var(--color-mint); font-weight: bold; display: ${displayStyle};">${durationVal}</span>
+                        <span id="note-quota-counter" style="color: #ff595e; font-weight: bold; background: rgba(255,89,94,0.1); padding: 2px 8px; border-radius: 6px;">${quotaData.count} / 20</span>
+                    </div>
+                </div>
+                <!-- Progress Bar -->
+                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
+                    <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, var(--color-mint) 0%, #ff595e 100%); transition: width 0.4s ease;"></div>
+                </div>
             `;
         }
     }
@@ -3330,6 +3363,10 @@ function startQuotaCountdown() {
 }
 
 async function toggleFrogGPTHistoryList() {
+    if (!isLoggedIn || !loggedInUser) {
+        alert("🔑 Please sign in (using the Sync icon in the top right) to save and load your chat session history!");
+        return;
+    }
     const listOverlay = document.getElementById('froggpt-history-list');
     if (!listOverlay) return;
 
@@ -5152,6 +5189,15 @@ async function startAudioRecording() {
             const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
             const secs = String(seconds % 60).padStart(2, '0');
             if (recordTimer) recordTimer.textContent = `${mins}:${secs}`;
+            
+            // Dynamic update of duration in the disclaimer
+            const durationMins = (seconds / 60).toFixed(2);
+            window.noteDurationText = `⏱️ ${durationMins} mins`;
+            const durElem = document.getElementById('note-recording-duration');
+            if (durElem) {
+                durElem.textContent = window.noteDurationText;
+                durElem.style.display = 'inline-block';
+            }
         }, 1000);
         
     } catch (err) {
@@ -5187,6 +5233,12 @@ function stopAudioRecording(silent = false) {
     if (!silent && recordStatus) {
         recordStatus.textContent = 'Processing recording...';
     }
+    
+    if (silent) {
+        window.noteDurationText = "";
+        const durElem = document.getElementById('note-recording-duration');
+        if (durElem) durElem.style.display = 'none';
+    }
 }
 
 function handleAudioFileSelect(event) {
@@ -5201,6 +5253,19 @@ function handleAudioFileSelect(event) {
     
     if (fileNameSpan) fileNameSpan.textContent = `📁 Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
     if (recordStatus) recordStatus.textContent = 'Audio file selected. Ready to transcribe.';
+    
+    // Get audio duration dynamically
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    audio.addEventListener('loadedmetadata', () => {
+        const durationMins = (audio.duration / 60).toFixed(2);
+        window.noteDurationText = `⏱️ ${durationMins} mins`;
+        const durElem = document.getElementById('note-recording-duration');
+        if (durElem) {
+            durElem.textContent = window.noteDurationText;
+            durElem.style.display = 'inline-block';
+        }
+    });
     
     enableTranscribeBtn(true);
 }
@@ -5258,7 +5323,7 @@ async function transcribeAudio() {
             const data = await res.json();
             if (data.success && data.transcript) {
                 // Increment quota count
-                incrementQueryCount();
+                incrementQueryCount(data.calls_made);
                 
                 if (textarea) {
                     textarea.value = data.transcript;
@@ -5365,7 +5430,7 @@ async function summarizeTranscript() {
             try {
                 // Increment quota count
                 try {
-                    incrementQueryCount();
+                    incrementQueryCount(data.calls_made);
                 } catch(e) {
                     console.error("incrementQueryCount failed:", e);
                 }
@@ -5554,7 +5619,7 @@ async function importVideoLink() {
             const data = await res.json();
             if (data.success && data.transcript) {
                 // Increment quota count
-                incrementQueryCount();
+                incrementQueryCount(data.calls_made);
 
                 if (textarea) {
                     textarea.value = data.transcript;

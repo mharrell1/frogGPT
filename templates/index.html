@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Froggy Pomodoro - Study, Relax & Hop</title>
+    <title>FrogGPT - Study, Relax & Hop</title>
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             alert("🚨 Global JS Error: " + message + "\nLine: " + lineno + " in " + source);
@@ -68,7 +68,7 @@
             <div class="header-main">
                 <div class="header-logo">
                     <span class="logo-emoji">🐸</span>
-                    <h1>Froggy Pomodoro</h1>
+                    <h1>FrogGPT</h1>
                 </div>
                 <button id="btn-cloud-sync" class="btn btn-sync-status" onclick="openSyncModal()" title="Account Settings">
                     <span class="sync-icon">👤</span>
@@ -288,7 +288,7 @@
             <div class="spotify-header">
                 <div class="spotify-title-group">
                     <svg class="spotify-logo" viewBox="0 0 24 24" width="24" height="24"><path fill="#1DB954" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.377-1.454-5.37-1.782-8.894-.978-.335.077-.668-.13-.746-.465-.077-.336.13-.67.466-.747 3.844-.88 7.14-.5 9.825 1.14.293.18.385.563.206.857zm1.225-2.72c-.226.367-.707.487-1.074.26-2.72-1.672-6.87-2.157-10.082-1.182-.413.125-.847-.107-.972-.52-.125-.413.108-.847.52-.972 3.67-1.114 8.243-.574 11.35 1.34.366.226.486.708.258 1.074zm.105-2.83C14.502 8.87 9.016 8.685 5.832 9.65c-.487.147-.998-.125-1.147-.61-.148-.488.125-.998.61-1.147 3.655-1.11 9.7-.9 13.626 1.43.438.26.58.825.32 1.263-.26.438-.825.58-1.263.32z"/></svg>
-                    <h2>Froggy Pond Radio</h2>
+                    <h2>FrogGPT Pond Radio</h2>
                 </div>
                 <div class="spotify-url-input">
                     <input type="text" id="spotify-link-input" placeholder="Paste Spotify link (playlist, album, track)...">
@@ -491,14 +491,14 @@
             <div class="modal-body games-modal-body" style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1; overflow-y: auto; align-items: stretch; padding: 10px 0;">
                 <!-- Game Tabs Selector -->
                 <div class="games-tabs-bar" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; width: 100%;">
-                    <button class="panel-tab-btn active" id="tab-game-2048" onclick="switchCozyArcadeGame('2048')" style="background: none; border: none; font-family: var(--font-heading); font-size: 1.15rem; font-weight: 600; color: var(--color-cream); cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid var(--color-sage); transition: all 0.2s;">🧩 Froggy 2048</button>
+                    <button class="panel-tab-btn active" id="tab-game-2048" onclick="switchCozyArcadeGame('2048')" style="background: none; border: none; font-family: var(--font-heading); font-size: 1.15rem; font-weight: 600; color: var(--color-cream); cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid var(--color-sage); transition: all 0.2s;">🧩 FrogGPT 2048</button>
                     <button class="panel-tab-btn" id="tab-game-study" onclick="switchCozyArcadeGame('study')" style="background: none; border: none; font-family: var(--font-heading); font-size: 1.15rem; font-weight: 600; color: var(--color-text-dim); cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid transparent; transition: all 0.2s;">📇 Study Games</button>
                 </div>
 
                 <!-- 2048 Game Container -->
                 <div class="game-container-2048" style="width: 320px; margin: 0 auto;">
                     <div class="game-header-2048">
-                        <div class="game-title-2048">Froggy 2048</div>
+                        <div class="game-title-2048">FrogGPT 2048</div>
                         <div class="scores-container-2048">
                             <div class="score-box-2048">
                                 SCORE
@@ -747,7 +747,7 @@
                 <div class="froggpt-chat-column" style="position: relative;">
                     <!-- Session History Control Panel -->
                     <div class="froggpt-history-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 8px;">
-                        <button id="btn-froggpt-history" class="btn btn-sm" onclick="toggleFrogGPTHistoryList()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--color-text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: none;">📜 Session History</button>
+                        <button id="btn-froggpt-history" class="btn btn-sm" onclick="toggleFrogGPTHistoryList()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--color-text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; opacity: 0.6;">🔒 Session History</button>
                         <button id="btn-froggpt-new-session" class="btn btn-sm" onclick="startNewFrogGPTSession()" style="background: rgba(135,195,143,0.1); border: 1px solid var(--color-mint); color: var(--color-mint); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">➕ New Chat</button>
                     </div>
 
@@ -845,9 +845,18 @@
             
             <div class="modal-body note-agent-modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 20px 0; max-height: 80vh; overflow-y: auto;">
                 <!-- Quota Disclaimer and Counter -->
-                <div class="note-quota-disclaimer" style="grid-column: 1 / span 2; margin-bottom: 4px; padding: 10px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 12px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
-                    <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135,195,143,0.1); padding: 2px 8px; border-radius: 6px;">0 / 20</span>
+                <div class="note-quota-disclaimer" style="grid-column: 1 / span 2; margin-bottom: 4px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 12px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="note-recording-duration" style="color: var(--color-mint); font-weight: bold; display: none;">⏱️ 0.00 mins</span>
+                            <span id="note-quota-counter" style="color: var(--color-mint); font-weight: bold; background: rgba(135,195,143,0.1); padding: 2px 8px; border-radius: 6px;">0 / 20</span>
+                        </div>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
+                        <div id="note-quota-progressbar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--color-mint) 0%, #ff595e 100%); transition: width 0.4s ease;"></div>
+                    </div>
                 </div>
                 
                 <!-- Left Column: Audio Recording and Uploading -->
