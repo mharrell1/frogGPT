@@ -166,8 +166,9 @@ Rules:
 - Short answer questions should require 2-4 sentences; provide a model answer and a list of 3-5 key grading points.
 - Write clear student instructions.
 - Vary cognitive levels: recall, comprehension, application, and analysis.
+- Ensure all string values in function call arguments are properly JSON-escaped (newlines as \n, quotes as \", backslashes as \\). Do not use raw, unescaped newlines inside the JSON strings.
 
-CRITICAL: You must call the finish_task tool exactly once with the complete PracticeTest data. Do NOT try to call any other tool. There is no tool named FinishTaskTrueFalse, FinishTaskMCQ, or anything else. Only call finish_task.
+CRITICAL: You must call the finish_task tool exactly once with the complete PracticeTest data. Do NOT try to call any other tool or invent tool names (e.g. based on field names like true_false or multiple_choice). Only call finish_task.
 
 After generating the test, call finish_task with the PracticeTest result.
 """,

@@ -669,9 +669,12 @@ def froggpt_chat():
 
         final_response_text = getattr(g, 'fallback_prefix', '') + full_text
         # Determine number of agents used:
-        # 1 coordinator agent ('study_agent') is always used.
-        # If subagent_author is set, a specialist agent was also used, making it 2 agents.
-        agents_used = 2 if subagent_author else 1
+        # Check all unique authors in events that are agent names
+        agent_names = {'study_agent', 'flashcard_agent', 'study_guide_agent', 'quiz_agent', 'test_agent', 'explain_agent'}
+        used_agents = {event.author for event in events if getattr(event, 'author', None) in agent_names}
+        agents_used = len(used_agents)
+        if agents_used == 0:
+            agents_used = 2 if subagent_author else 1
 
         return jsonify({
             'success': True,
