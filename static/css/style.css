@@ -3830,3 +3830,228 @@ input[type=number] {
 .wave-bar {
     transform-origin: bottom;
 }
+
+/* Resize and scale layout to fit within the viewport height on desktop screen sizes */
+@media (min-width: 900px) and (min-height: 600px) {
+    body {
+        height: 100vh;
+        max-height: 100vh;
+        overflow: hidden;
+        padding: 12px;
+    }
+    
+    .app-container {
+        height: 100%;
+        max-height: 100%;
+        gap: 12px;
+        justify-content: space-between;
+    }
+    
+    .app-header {
+        margin-bottom: 2px;
+    }
+    .app-header h1 {
+        font-size: 2.0rem;
+    }
+    .app-header .tagline {
+        font-size: 0.9rem;
+    }
+    
+    .mascot-card {
+        padding: 10px 20px;
+        margin-bottom: 0px;
+        gap: 12px;
+    }
+    .mascot-img-container {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .app-grid {
+        flex: 1 1 0%;
+        min-height: 0;
+        gap: 16px;
+        grid-template-rows: 1fr;
+        align-items: stretch;
+    }
+    
+    .timer-panel, .tasks-panel, .mascot-panel {
+        height: 100% !important;
+        max-height: 100% !important;
+        overflow: hidden;
+        padding: 16px !important;
+    }
+    
+    /* Center column - Mascot */
+    .frog-headphone-container {
+        width: 110px !important;
+        height: 110px !important;
+        margin-bottom: 8px !important;
+    }
+    .headphones-overlay {
+        font-size: 7.8rem !important;
+    }
+    .frog-headphone-container.music-playing .headphones-overlay {
+        font-size: 7.5rem !important;
+    }
+    .lily-speech-bubble {
+        padding: 10px 14px !important;
+        margin-bottom: 8px !important;
+        font-size: 0.85rem !important;
+        max-width: 220px;
+    }
+    .ambient-sounds-control {
+        padding-top: 10px !important;
+    }
+    .ambient-sounds-control h3 {
+        margin-bottom: 6px !important;
+        font-size: 0.9rem !important;
+    }
+    .ambient-controls-grid {
+        gap: 8px !important;
+    }
+    .ambient-control-card {
+        padding: 6px 4px !important;
+        border-radius: 10px !important;
+        gap: 4px !important;
+    }
+    .ambient-control-card button {
+        font-size: 0.8rem !important;
+        padding: 4px 8px !important;
+    }
+    
+    /* Left column - Timer */
+    .timer-settings {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+    }
+    .settings-group {
+        flex-direction: column !important;
+        gap: 2px !important;
+        padding: 4px 6px !important;
+        align-items: center !important;
+    }
+    .settings-group label {
+        font-size: 0.7rem !important;
+        text-align: center;
+    }
+    .number-control {
+        gap: 4px !important;
+    }
+    .btn-step {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.9rem !important;
+    }
+    .number-control input[type="number"], .time-duration-input {
+        width: 32px !important;
+        font-size: 0.85rem !important;
+    }
+    .timer-category-container {
+        margin-top: 6px !important;
+    }
+    .timer-display-container {
+        width: 120px !important;
+        height: 120px !important;
+        margin: 0 auto 8px auto !important;
+    }
+    .progress-ring {
+        width: 120px !important;
+        height: 120px !important;
+    }
+    #timer-countdown {
+        font-size: 1.8rem !important;
+    }
+    #timer-state {
+        font-size: 0.75rem !important;
+    }
+    #session-counter {
+        font-size: 0.7rem !important;
+    }
+    .timer-controls {
+        gap: 8px !important;
+    }
+    .timer-controls button {
+        padding: 8px 14px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Right column - Tasks */
+    .controls-bar {
+        margin-bottom: 8px !important;
+        gap: 8px !important;
+    }
+    .filters-grid {
+        gap: 6px !important;
+        margin-top: 6px !important;
+    }
+    .filters-grid .control-group {
+        padding: 4px 8px !important;
+        border-radius: 8px !important;
+    }
+    .filters-grid label {
+        font-size: 0.7rem !important;
+    }
+    .filters-grid select {
+        font-size: 0.8rem !important;
+        padding: 4px !important;
+    }
+    .search-box input {
+        padding: 6px 10px !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Spotify Panel */
+    .spotify-panel {
+        padding: 12px 18px !important;
+        gap: 8px !important;
+    }
+    .spotify-header {
+        padding-bottom: 8px !important;
+        gap: 12px !important;
+    }
+    .spotify-url-input {
+        max-width: 380px !important;
+    }
+    .spotify-url-input input {
+        padding: 6px 10px !important;
+        font-size: 0.85rem !important;
+    }
+    .spotify-url-input button {
+        padding: 6px 12px !important;
+        font-size: 0.85rem !important;
+    }
+    .spotify-body {
+        gap: 12px !important;
+    }
+    .spotify-tip-banner {
+        display: none !important;
+    }
+    .curated-playlists h3 {
+        font-size: 0.85rem !important;
+        margin-bottom: 2px !important;
+    }
+    .playlists-grid {
+        gap: 6px !important;
+    }
+    .playlist-btn {
+        padding: 6px 10px !important;
+        border-radius: 10px !important;
+        gap: 8px !important;
+    }
+    .playlist-icon {
+        font-size: 1.2rem !important;
+    }
+    .playlist-name {
+        font-size: 0.8rem !important;
+    }
+    .playlist-desc {
+        display: none !important;
+    }
+    .spotify-iframe-container {
+        min-height: 80px !important;
+        height: 80px !important;
+    }
+}
