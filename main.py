@@ -1,7 +1,7 @@
 import os
 import sys
 import sqlite3
-from flask import Flask, render_template, request, jsonify, session, g, send_file
+from flask import Flask, render_template, request, jsonify, session, g, send_file, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Initialize ADK frogGPT runner if study-agent is available
@@ -218,13 +218,22 @@ def init_db():
 # Quota counting helper functions
 import datetime
 
-def get_server_date_str():
-    # Return date string format: Fri Jul 03 2026 (matching toDateString in JS)
+def get_request_date_str():
+    if has_request_context():
+        # 1. Try to get from header
+        date_str = request.headers.get('X-Client-Date')
+        if date_str:
+            return date_str.strip()
+        # 2. Try to get from query parameters
+        date_str = request.args.get('date')
+        if date_str:
+            return date_str.strip()
+    # 3. Fallback to server local date formatted matching toDateString()
     return datetime.date.today().strftime('%a %b %d %Y')
 
 def get_daily_quota_count():
     db = get_db()
-    date_str = get_server_date_str()
+    date_str = get_request_date_str()
     cursor = db.execute("SELECT calls_count FROM daily_quota_calls WHERE date_str = ?", (date_str,))
     row = cursor.fetchone()
     if row:
@@ -233,7 +242,7 @@ def get_daily_quota_count():
 
 def increment_daily_quota_count(amount=1):
     db = get_db()
-    date_str = get_server_date_str()
+    date_str = get_request_date_str()
     current = get_daily_quota_count()
     new_count = current + amount
     db.execute(

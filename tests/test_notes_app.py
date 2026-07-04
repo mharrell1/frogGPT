@@ -225,7 +225,7 @@ def test_server_quota_limit(client):
     # Reset/set quota in DB to 20
     with flask_app.app.app_context():
         db = flask_app.get_db()
-        date_str = flask_app.get_server_date_str()
+        date_str = flask_app.get_request_date_str()
         db.execute("INSERT OR REPLACE INTO daily_quota_calls (date_str, calls_count) VALUES (?, 20)", (date_str,))
         db.commit()
 

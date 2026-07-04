@@ -5,6 +5,29 @@
     } catch(e) {}
 })();
 
+// --- Automatically inject X-Client-Date timezone header into all API requests ---
+(function() {
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        const url = typeof input === 'string' ? input : (input.url || '');
+        if (url.includes('/api/')) {
+            init = init || {};
+            init.headers = init.headers || {};
+            if (init.headers instanceof Headers) {
+                init.headers.set('X-Client-Date', new Date().toDateString());
+            } else if (Array.isArray(init.headers)) {
+                const hasHeader = init.headers.some(h => h[0].toLowerCase() === 'x-client-date');
+                if (!hasHeader) {
+                    init.headers.push(['X-Client-Date', new Date().toDateString()]);
+                }
+            } else {
+                init.headers['X-Client-Date'] = new Date().toDateString();
+            }
+        }
+        return originalFetch(input, init);
+    };
+})();
+
 // --- Global Encryption & Security Wrapper for localStorage ---
 (function() {
     const originalGetItem = localStorage.getItem;
