@@ -905,11 +905,29 @@ def notes_transcribe():
         file_size = os.path.getsize(temp_path)
         print(f"[Notes Transcribe] Saved to temporary file: {temp_path}, size: {file_size} bytes")
 
+        # Determine MIME type with robust fallbacks
+        mime_type = audio_file.mimetype
+        ext = os.path.splitext(audio_file.filename)[1].lower()
+        if not mime_type or mime_type in ('application/octet-stream', 'binary/octet-stream'):
+            ext_map = {
+                '.m4a': 'audio/mp4',
+                '.mp3': 'audio/mp3',
+                '.wav': 'audio/wav',
+                '.webm': 'audio/webm',
+                '.ogg': 'audio/ogg',
+                '.mp4': 'video/mp4',
+                '.mov': 'video/quicktime',
+                '.avi': 'video/x-msvideo',
+                '.mkv': 'video/x-matroska',
+            }
+            mime_type = ext_map.get(ext, 'audio/webm')
+        print(f"[Notes Transcribe] Resolved upload mimetype to: {mime_type}")
+
         media_file = None
         try:
             # Upload using Files API
-            print(f"[Notes Transcribe] Uploading file via Files API...")
-            media_file = active_client.files.upload(file=temp_path)
+            print(f"[Notes Transcribe] Uploading file via Files API with mimetype {mime_type}...")
+            media_file = active_client.files.upload(file=temp_path, mime_type=mime_type)
             print(f"[Notes Transcribe] Upload response received. File name: {media_file.name}, initial state: {media_file.state.name}")
             
             # Wait for file processing to complete
