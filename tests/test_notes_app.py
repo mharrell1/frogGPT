@@ -39,6 +39,13 @@ def mock_genai_client():
     mock_response.text = "This is a mock response from Gemini."
     mock_client.models.generate_content.return_value = mock_response
     
+    # Mock files API
+    mock_file = MagicMock()
+    mock_file.name = "mock_file_name"
+    mock_file.state.name = "ACTIVE"
+    mock_client.files.upload.return_value = mock_file
+    mock_client.files.get.return_value = mock_file
+    
     # Store original client
     orig_client = flask_app.genai_client
     flask_app.genai_client = mock_client
@@ -205,7 +212,7 @@ def test_notes_import_link_direct_youtube_fallback(client, mock_genai_client):
         assert res_data['success'] is True
         assert res_data['transcript'] == "This is a transcript generated directly by Gemini."
 
-def test_quota_accurate_counting(client):
+def test_quota_accurate_counting(client, mock_genai_client):
     """Test that multiple generate_content calls correctly increment calls_made in the response."""
     mock_response = MagicMock()
     mock_response.text = "Hello study partner!"

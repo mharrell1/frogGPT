@@ -891,24 +891,49 @@ def notes_transcribe():
         return jsonify({'error': 'No selected audio file'}), 400
 
     try:
-        audio_bytes = audio_file.read()
-        mime_type = audio_file.mimetype or 'audio/webm'
+        import tempfile
+        import time
         
-        # Call Gemini to transcribe
-        response = active_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[
-                types.Part.from_bytes(
-                    data=audio_bytes,
-                    mime_type=mime_type
-                ),
-                "Please transcribe the following audio recording with extremely high fidelity. Output the transcription directly, word-for-word, without any additional explanations, notes, or introductions."
-            ]
-        )
-        
-        transcript = response.text or ""
-        increment_daily_quota_count(1)
-        return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
+        # Save to a temporary file preserving its original extension
+        suffix = os.path.splitext(audio_file.filename)[1] or '.webm'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            audio_file.save(temp_file.name)
+            temp_path = temp_file.name
+
+        media_file = None
+        try:
+            # Upload using Files API
+            media_file = active_client.files.upload(file=temp_path)
+            
+            # Wait for file processing to complete
+            while media_file.state.name == "PROCESSING":
+                time.sleep(1)
+                media_file = active_client.files.get(name=media_file.name)
+                
+            if media_file.state.name == "FAILED":
+                raise Exception("Audio file processing failed on Gemini.")
+
+            # Call Gemini to transcribe
+            response = active_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    media_file,
+                    "Please transcribe the following audio recording with extremely high fidelity. Output the transcription directly, word-for-word, without any additional explanations, notes, or introductions."
+                ]
+            )
+            
+            transcript = response.text or ""
+            increment_daily_quota_count(1)
+            return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
+        finally:
+            # Clean up files
+            if media_file:
+                try:
+                    active_client.files.delete(name=media_file.name)
+                except Exception:
+                    pass
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
     except Exception as e:
         import traceback
         traceback.print_exc()
