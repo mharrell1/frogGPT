@@ -4850,7 +4850,7 @@ window.studyNotesWithFrogGPT = function(noteId, action) {
                 } else if (action === 'guide') {
                     promptText = `Generate study guide`;
                 } else if (action === 'chat') {
-                    promptText = `Ask questions`;
+                    promptText = `I want to ask you questions about these notes. Please give me a brief summary of the key points first, and then let me know you are ready to answer my questions!`;
                 }
 
                 // Close modal
