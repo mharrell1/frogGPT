@@ -5308,20 +5308,34 @@ function handleAudioFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
     
+    // Check file size (max 25MB to fit within Cloud Run's 32MB limit)
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 25) {
+        alert(`⚠️ Selected file is too large (${fileSizeMB.toFixed(2)} MB).\n\nCloud Run has a strict request limit of 32MB. Please upload a file smaller than 25MB, or import it using the Video URL box!`);
+        event.target.value = ''; // Reset input selection
+        return;
+    }
+    
     noteAudioFile = file;
     noteRecordedBlob = null; // Clear previous recording
     
     const fileNameSpan = document.getElementById('audio-file-name');
     const recordStatus = document.getElementById('record-status');
     
-    if (fileNameSpan) fileNameSpan.textContent = `📁 Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-    if (recordStatus) recordStatus.textContent = 'Audio file selected. Ready to transcribe.';
+    if (fileNameSpan) fileNameSpan.textContent = `📁 Selected: ${file.name} (${fileSizeMB.toFixed(2)} MB)`;
+    if (recordStatus) recordStatus.textContent = 'Audio/video file selected. Ready to transcribe.';
     
-    // Get audio duration dynamically
-    const audio = new Audio();
-    audio.src = URL.createObjectURL(file);
-    audio.addEventListener('loadedmetadata', () => {
-        const durationMins = (audio.duration / 60).toFixed(2);
+    // Get audio/video duration dynamically using appropriate HTML element
+    const isVideo = file.type.startsWith('video/') || 
+                    file.name.endsWith('.mp4') || 
+                    file.name.endsWith('.mov') || 
+                    file.name.endsWith('.avi') || 
+                    file.name.endsWith('.mkv');
+    const mediaElem = isVideo ? document.createElement('video') : document.createElement('audio');
+    
+    mediaElem.src = URL.createObjectURL(file);
+    mediaElem.addEventListener('loadedmetadata', () => {
+        const durationMins = (mediaElem.duration / 60).toFixed(2);
         window.noteDurationText = `⏱️ ${durationMins} mins`;
         const durElem = document.getElementById('note-recording-duration');
         if (durElem) {
