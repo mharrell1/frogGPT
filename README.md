@@ -1,6 +1,6 @@
-# 🐸 FrogGPT — Study, Relax & Hop
+# 🐸 frogGPT — Study, Relax & Hop
 
-Welcome to **FrogGPT**, a cozy and aesthetic productivity web application designed to help you stay focused, manage tasks, and listen to relaxing music alongside Lily, your study-frog mascot.
+Welcome to **frogGPT**, a cozy and aesthetic productivity web application designed to help you stay focused, manage tasks, and study alongside Lily, your study-frog mascot.
 
 ---
 
@@ -11,7 +11,7 @@ Welcome to **FrogGPT**, a cozy and aesthetic productivity web application design
 * **Cozy Status Tracker:** Keeps track of your active focus cycles and alerts you when it's time to take a break or start studying again.
 * **Animated Progress Circular Ring:** Smoothly visualizes the remaining time.
 
-### 📋 2. "Tasks to Hop On" (To-Do List Updates!)
+### 📋 2. "Tasks to Hop On" (To-Do List)
 * **Due Dates:** Assign specific target dates to tasks to help plan your schedule.
 * **Cozy Categorization:** Label tasks as **School** or **Work**, or click `+` to add custom categories. Custom categories are automatically color-coded with unique pastel badges.
 * **Urgency Levels:** Label tasks as **Low** 🟢, **Medium** 🟡, or **High** 🔴 urgency to identify priority items at a glance.
@@ -30,12 +30,12 @@ Welcome to **FrogGPT**, a cozy and aesthetic productivity web application design
 
 ### 🎮 4. Cozy Game Arcade & Study Games (Full-Page Playground!)
 * **Cozy Destress Games:** Accessed via the game controller icon (`🎮`) in the left panel sidebar. Takes up the full viewport window.
-* **FrogGPT 2048 Theme:** Play a cozy themed version of the classic 2048 game using custom pastel colors, culminating in a special **"2048 🐸"** tile.
+* **frogGPT 2048 Theme:** Play a cozy themed version of the classic 2048 game using custom pastel colors, culminating in a special **"2048 🐸"** tile.
 * **Matching Study Game:** Match terms and definitions from your selected deck side-by-side in a race against time! Cards automatically fade when matched.
 * **Asteroid Blaster Study Game:** Aim and blast arriving asteroids containing definitions by matching them with the correct term loaded on your blaster.
 * **Saves High Score:** Automatically saves your highest score locally (`bestScore2048` stored in `localStorage`).
 
-### 📻 5. FrogGPT Pond Radio (Spotify Integration)
+### 📻 5. frogGPT Pond Radio (Spotify Integration)
 * **Curated Stations:** Quick-switch between four pre-configured ambient playlists (Lofi Focus Beats, Peaceful Piano, Nature Rain Sounds, and Nintendo & Chill).
 * **Load Custom Music:** Paste any Spotify track, album, or playlist link to load it dynamically into the built-in media widget.
 * **Animated Interactions:** When music starts playing, Lily puts on headphones, bobs her head to the beat, and floating music notes drift across the screen!
@@ -65,10 +65,23 @@ Welcome to **FrogGPT**, a cozy and aesthetic productivity web application design
   * **Interactive Quizzes:** Answer multiple-choice questions with color-coded feedback and view final scores.
   * **Graded Practice Tests:** Complete True/False, Multiple-Choice, and Short Answer exams with sample answers and detailed score lists.
 * **Multi-Format Document Imports:** Click the attachment icon (`📎`) to upload `.txt`, `.md`, `.docx`, or `.pdf` documents to generate personalized study decks.
-* **Daily Quota Counter & Model Selector:**
-  * Displays a daily free quota tracker (**20 queries/day limit**) that resets daily via browser `localStorage`.
-  * Includes an **interactive countdown timer** showing exactly when your daily quota will replenish (ticking down until midnight local time, or automatically triggered when API rate limit/429 errors occur).
-  * Multi-model switching between **Gemini 2.5 Flash** (default) and **Gemini 2.5 Pro** with intelligent error parsing for unsupported models.
+
+### 🗒️ 9. frogNote Agent (AI Note Taker)
+* **Compact Viewport Optimization**: Designed with a tight modal layout fitting completely within the browser window to avoid vertical scrolling.
+* **Multi-Input Transcription**:
+  * **Voice Recording**: Record lectures or meetings live with a dynamic remaining time limit indicator (5 minutes per remaining daily call).
+  * **Local Uploads**: Upload audio and video files (supporting `.mp3`, `.wav`, `.m4a`, and `.mp4` files) with automated metadata parsing.
+  * **URL Imports**: Download and transcribe YouTube videos natively using Gemini multimodal execution.
+* **Client-Side Safety Checks**:
+  * Blocks files larger than `25MB` to prevent gateway failures against Cloud Run's strict 32MB payload limit.
+  * Dynamically handles video metadata via `video` DOM elements.
+* **Document Export**: Transcribe, summarize, and export structured lecture/meeting notes as formatted Word Documents (`.docx`) or PDFs (`.pdf`).
+
+### 📊 10. Server-Side Daily Quota Database & Timezone Tracking
+* **Daily Free Quota Limit**: Restricts API calls to **20 queries/day** (shared across frogGPT and frogNote agents) enforced persistently on the server via a SQLite `daily_quota_calls` table.
+* **Browser Local Timezone Reset**: Attaches a custom `X-Client-Date` header to requests. The Flask server extracts this header to match local timezone dates instead of the Cloud Run UTC system clock, ensuring midnight resets align with the user's timezone.
+* **Model-Not-Supported Detection**: Gracefully parses rate limits and model mismatch errors, directing users to switch to available Gemini 2.5 Flash or Pro models.
+* **503 High Demand Catching**: Detects `503 Service Unavailable` exceptions from Google AI Studio and formats them separately from quota exhaustion events.
 
 ---
 
@@ -136,14 +149,14 @@ To deploy your own copy of the app:
 
 ## 🏛️ System Architecture
 
-FrogGPT is designed as a modular, decoupled application separating the user-facing web layer, the agentic reasoning coordinator, and the secure data-access layer.
+frogGPT is designed as a modular, decoupled application separating the user-facing web layer, the agentic reasoning coordinator, and the secure data-access layer.
 
 ```mermaid
 graph TD
     User([User / Browser]) <-->|HTTP / WebSockets| Flask[Flask Web App]
     Flask <-->|Direct SQLite Connection| DB[(tasks.db)]
     
-    subgraph "Multi-Agent System (ADK 2.0)"
+    subgraph MAS["Multi-Agent System (ADK 2.0)"]
         Flask <-->|Runner.run| RootAgent[study_agent (Coordinator)]
         RootAgent <-->|Task Delegation| Flashcard[flashcard_agent]
         RootAgent <-->|Task Delegation| Quiz[quiz_agent]
@@ -152,7 +165,7 @@ graph TD
         RootAgent <-->|Task Delegation| Guide[study_guide_agent]
     end
 
-    subgraph "MCP Server Integration"
+    subgraph MCP_Integration["MCP Server Integration"]
         RootAgent <-->|Stdio / JSON-RPC| MCP[MCP Database Server]
         MCP <-->|SQLite Query / Mutation| DB
     end
@@ -198,7 +211,6 @@ We have implemented and demonstrated the following core concepts from the Google
 * Utilized file-based agent skills (`skill.md` patterns) via the **Google Agent CLI (`agents-cli`)** to manage prompt layouts, run local lints, evaluate results, and structure code.
 
 ---
-
 
 ## 📂 File Structure
 
