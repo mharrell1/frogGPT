@@ -723,8 +723,12 @@ def froggpt_chat():
                     err_msg += str(event.status) + " "
             
             events_str = str(events)
+            is_503 = "503" in events_str or "unavailable" in events_str.lower() or "high demand" in events_str.lower() or "503" in err_msg or "unavailable" in err_msg.lower() or "high demand" in err_msg.lower()
+            
             if "not found" in events_str.lower() or "not supported" in events_str.lower():
                 full_text = f"⚠️ **Model Not Supported or Not Found**\n\n🐸 Lily tried to use the selected model, but it is not available on your API key or is not supported.\n\n**Details**: `{err_msg or 'Model not supported'}`\n\n🔄 **Fix**: Please switch your study model to **Gemini 2.5 Flash** or **Gemini 2.5 Pro** in the dropdown select!"
+            elif is_503:
+                full_text = f"⚠️ **Gemini API Service Temporarily Unavailable (503)**\n\n🐸 Lily tried to connect, but the Gemini model is currently experiencing high demand or is temporarily unavailable.\n\n**Details**: `{err_msg or 'This model is currently experiencing high demand. Please try again later.'}`\n\n⏳ **Fix**: Please wait about 15–30 seconds and try clicking the button again!"
             elif err_msg or "429" in events_str or "quota" in events_str.lower() or "resource_exhausted" in events_str.lower():
                 full_text = f"⚠️ **Google AI Studio Quota Exceeded / Rate Limit**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached (`429 Too Many Requests`).\n\n**Details**: {err_msg or 'Free tier limits requests to 20 per minute or daily limits.'}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try clicking the button again!"
             else:
@@ -752,13 +756,30 @@ def froggpt_chat():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # Check if the exception itself is a quota error
+        # Check if the exception itself is a quota or service availability error
         err_str = str(e)
-        if "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower():
+        is_503 = "503" in err_str or "unavailable" in err_str.lower() or "high demand" in err_str.lower()
+        is_429 = "429" in err_str or "quota" in err_str.lower() or "resource_exhausted" in err_str.lower()
+        
+        if is_503 or is_429:
             # If it failed, check gemini calls count to estimate if it delegated to a subagent before failing
             agents_used = 2 if getattr(g, 'gemini_calls_count', 0) > 1 else 1
             increment_daily_quota_count(agents_used)
-            return jsonify({'success': True, 'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!", 'session_id': session_id, 'calls_made': agents_used})
+            
+            if is_503:
+                return jsonify({
+                    'success': True,
+                    'response': f"⚠️ **Gemini API Service Temporarily Unavailable (503)**\n\n🐸 Lily tried to connect, but the Gemini model is currently experiencing high demand or is temporarily unavailable.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 15–30 seconds and try again!",
+                    'session_id': session_id,
+                    'calls_made': agents_used
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'response': f"⚠️ **Google AI Studio Quota Exceeded (`429`)**\n\n🐸 Lily tried to answer, but the Gemini API free tier quota was reached.\n\n**Error Details**: {err_str}\n\n⏳ **Fix**: Please wait about 45–60 seconds, take a deep breath, and try again!",
+                    'session_id': session_id,
+                    'calls_made': agents_used
+                })
         return jsonify({'error': str(e)}), 500
     finally:
         # Restore original cached clients
