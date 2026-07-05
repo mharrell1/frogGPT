@@ -3327,7 +3327,13 @@ function updateQueryCounterUI() {
             noteCounterElem.style.color = 'var(--color-mint)';
             noteCounterElem.style.background = 'rgba(135, 195, 143, 0.1)';
             if (noteDisclaimerElem) {
-                const pct = Math.min((quotaData.count / 20) * 100, 100);
+                const pct = Math.max(0, ((20 - quotaData.count) / 20) * 100);
+                let barColor = 'var(--color-mint)';
+                if (pct <= 20) {
+                    barColor = '#ff595e';
+                } else if (pct <= 50) {
+                    barColor = '#f4d35e';
+                }
                 const durationVal = window.noteDurationText || "";
                 const displayStyle = durationVal ? "inline-block" : "none";
                 noteDisclaimerElem.innerHTML = `
@@ -3340,7 +3346,7 @@ function updateQueryCounterUI() {
                     </div>
                     <!-- Progress Bar -->
                     <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
-                        <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, var(--color-mint) 0%, #ff595e 100%); transition: width 0.4s ease;"></div>
+                        <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: ${barColor}; transition: width 0.4s ease, background-color 0.4s ease;"></div>
                     </div>
                 `;
             }
@@ -3381,7 +3387,13 @@ function startQuotaCountdown() {
             `;
         }
         if (noteDisclaimerElem) {
-            const pct = Math.min((quotaData.count / 20) * 100, 100);
+            const pct = Math.max(0, ((20 - quotaData.count) / 20) * 100);
+            let barColor = 'var(--color-mint)';
+            if (pct <= 20) {
+                barColor = '#ff595e';
+            } else if (pct <= 50) {
+                barColor = '#f4d35e';
+            }
             const durationVal = window.noteDurationText || "";
             const displayStyle = durationVal ? "inline-block" : "none";
             noteDisclaimerElem.innerHTML = `
@@ -3394,7 +3406,7 @@ function startQuotaCountdown() {
                 </div>
                 <!-- Progress Bar -->
                 <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; position: relative;">
-                    <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: linear-gradient(90deg, var(--color-mint) 0%, #ff595e 100%); transition: width 0.4s ease;"></div>
+                    <div id="note-quota-progressbar" style="height: 100%; width: ${pct}%; background: ${barColor}; transition: width 0.4s ease, background-color 0.4s ease;"></div>
                 </div>
             `;
         }
@@ -5232,13 +5244,22 @@ async function startAudioRecording() {
             const secs = String(seconds % 60).padStart(2, '0');
             if (recordTimer) recordTimer.textContent = `${mins}:${secs}`;
             
-            // Dynamic update of duration in the disclaimer
-            const durationMins = (seconds / 60).toFixed(2);
-            window.noteDurationText = `⏱️ ${durationMins} mins`;
+            // Calculate remaining minutes based on daily quota left (5 minutes per remaining call)
+            const quotaData = getQueryCountForToday();
+            const currentRecordingMins = seconds / 60;
+            const remainingMins = Math.max(0, (20 - quotaData.count) * 5 - currentRecordingMins);
+            
+            window.noteDurationText = `⏱️ ${remainingMins.toFixed(2)} mins remaining`;
             const durElem = document.getElementById('note-recording-duration');
             if (durElem) {
                 durElem.textContent = window.noteDurationText;
                 durElem.style.display = 'inline-block';
+            }
+            
+            // Update progress bar to reflect remaining minutes out of 100 total daily minutes
+            const progressbar = document.getElementById('note-quota-progressbar');
+            if (progressbar) {
+                progressbar.style.width = `${Math.min(100, remainingMins)}%`;
             }
         }, 1000);
         
