@@ -926,8 +926,14 @@ def notes_transcribe():
         media_file = None
         try:
             # Upload using Files API
+            from google.genai import types
             print(f"[Notes Transcribe] Uploading file via Files API with mimetype {mime_type}...")
-            media_file = active_client.files.upload(file=temp_path, mime_type=mime_type)
+            media_file = active_client.files.upload(
+                file=temp_path,
+                config=types.UploadFileConfig(
+                    mime_type=mime_type
+                )
+            )
             print(f"[Notes Transcribe] Upload response received. File name: {media_file.name}, initial state: {media_file.state.name}")
             
             # Wait for file processing to complete
