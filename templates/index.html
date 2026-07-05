@@ -843,9 +843,9 @@
                 <button class="btn-close" onclick="closeNoteAgentModal()">&times;</button>
             </div>
             
-            <div class="modal-body note-agent-modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 20px 0; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-body note-agent-modal-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px 0; max-height: 80vh; overflow-y: auto;">
                 <!-- Quota Disclaimer and Counter -->
-                <div class="note-quota-disclaimer" style="grid-column: 1 / span 2; margin-bottom: 4px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 12px; font-size: 0.82rem; display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <div class="note-quota-disclaimer" style="grid-column: 1 / span 2; padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); border-radius: 10px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 6px; width: 100%;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span>⚠️ Daily Free Quota: <strong>20 calls/day (shared with frogGPT)</strong></span>
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -860,80 +860,78 @@
                 </div>
                 
                 <!-- Left Column: Audio Recording and Uploading -->
-                <div class="recording-column" style="display: flex; flex-direction: column; gap: 16px; background: rgba(0, 0, 0, 0.15); padding: 20px; border-radius: 18px; border: 1px solid var(--panel-border);">
-                    <h3 style="color: var(--color-mint); margin-top: 0; font-family: var(--font-heading); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">🎙️ Record or Upload Audio</h3>
+                <div class="recording-column" style="display: flex; flex-direction: column; gap: 10px; background: rgba(0, 0, 0, 0.15); padding: 12px; border-radius: 14px; border: 1px solid var(--panel-border);">
+                    <h3 style="color: var(--color-mint); margin-top: 0; margin-bottom: 2px; font-family: var(--font-heading); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🎙️ Record or Upload Audio</h3>
                     
                     <!-- Recorder Box -->
-                    <div class="recorder-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 10px; border: 2px dashed rgba(255,255,255,0.1); border-radius: 14px; background: rgba(0,0,0,0.1); text-align: center; gap: 12px; position: relative;">
+                    <div class="recorder-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; border: 1.5px dashed rgba(255,255,255,0.1); border-radius: 10px; background: rgba(0,0,0,0.1); text-align: center; gap: 6px; position: relative;">
                         <!-- Recording Animation Waves -->
-                        <div id="record-wave" class="record-wave-container hidden" style="display: flex; gap: 4px; height: 30px; align-items: center; margin-bottom: 8px;">
-                            <div class="wave-bar" style="width: 4px; height: 10px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate;"></div>
-                            <div class="wave-bar" style="width: 4px; height: 25px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.2s;"></div>
-                            <div class="wave-bar" style="width: 4px; height: 15px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.4s;"></div>
-                            <div class="wave-bar" style="width: 4px; height: 28px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.1s;"></div>
-                            <div class="wave-bar" style="width: 4px; height: 8px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.3s;"></div>
+                        <div id="record-wave" class="record-wave-container hidden" style="display: flex; gap: 4px; height: 20px; align-items: center; margin-bottom: 4px;">
+                            <div class="wave-bar" style="width: 4px; height: 8px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate;"></div>
+                            <div class="wave-bar" style="width: 4px; height: 18px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.2s;"></div>
+                            <div class="wave-bar" style="width: 4px; height: 12px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.4s;"></div>
+                            <div class="wave-bar" style="width: 4px; height: 20px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.1s;"></div>
+                            <div class="wave-bar" style="width: 4px; height: 6px; background: #ff595e; border-radius: 2px; animation: bounceWave 0.8s ease infinite alternate 0.3s;"></div>
                         </div>
                         
                         <!-- Pulse mic button -->
-                        <button id="btn-record-mic" class="mic-button" onclick="toggleAudioRecording()" style="width: 70px; height: 70px; border-radius: 50%; border: none; background: var(--color-mint); color: var(--bg-dark); font-size: 1.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(135,195,143,0.3); transition: all 0.3s;">🎙️</button>
+                        <button id="btn-record-mic" class="mic-button" onclick="toggleAudioRecording()" style="width: 48px; height: 48px; border-radius: 50%; border: none; background: var(--color-mint); color: var(--bg-dark); font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(135,195,143,0.3); transition: all 0.3s;">🎙️</button>
                         
-                        <div id="record-status" style="font-weight: bold; font-size: 0.9rem; color: var(--color-cream);">Click to start recording</div>
-                        <div id="record-timer" style="font-family: monospace; font-size: 1.1rem; color: var(--color-text-dim); display: none;">00:00</div>
+                        <div id="record-status" style="font-weight: bold; font-size: 0.8rem; color: var(--color-cream);">Click to start recording</div>
+                        <div id="record-timer" style="font-family: monospace; font-size: 0.9rem; color: var(--color-text-dim); display: none;">00:00</div>
                     </div>
                     
-                    <div style="text-align: center; color: var(--color-text-dim); font-size: 0.8rem; font-weight: bold; margin: 4px 0;">— OR —</div>
-                    
-                    <!-- File Upload Box -->
-                    <div class="audio-upload-box" style="display: flex; flex-direction: column; gap: 8px;">
-                        <label for="audio-file-upload" style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Upload Local Audio File</label>
-                        <div style="position: relative;">
-                            <input type="file" id="audio-file-upload" accept="audio/*" onchange="handleAudioFileSelect(event)" style="display: none;">
-                            <button class="btn btn-secondary" onclick="document.getElementById('audio-file-upload').click()" style="width: 100%; font-size: 0.82rem; padding: 10px; border-radius: 10px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                                📁 <span>Choose audio file...</span>
-                            </button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 2px 0; align-items: end;">
+                        <!-- File Upload Box -->
+                        <div class="audio-upload-box" style="display: flex; flex-direction: column; gap: 4px;">
+                            <label for="audio-file-upload" style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Upload Audio / Video</label>
+                            <div style="position: relative;">
+                                <input type="file" id="audio-file-upload" accept="audio/*,video/*" onchange="handleAudioFileSelect(event)" style="display: none;">
+                                <button class="btn btn-secondary" onclick="document.getElementById('audio-file-upload').click()" style="width: 100%; font-size: 0.78rem; padding: 8px; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: #fff; cursor: pointer;">
+                                    📁 <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Choose file...</span>
+                                </button>
+                            </div>
+                            <span id="audio-file-name" style="font-size: 0.65rem; color: var(--color-mint); text-align: center; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;"></span>
                         </div>
-                        <span id="audio-file-name" style="font-size: 0.75rem; color: var(--color-mint); text-align: center; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;"></span>
-                    </div>
-                    
-                    <div style="text-align: center; color: var(--color-text-dim); font-size: 0.8rem; font-weight: bold; margin: 4px 0;">— OR —</div>
-                    
-                    <!-- Paste Video Link Box -->
-                    <div class="video-link-box" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px;">
-                        <label for="video-link-input" style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Import from Video URL</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="video-link-input" placeholder="Paste YouTube or video URL..." style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: #fff; font-family: var(--font-body); font-size: 0.82rem; outline: none;">
-                            <button id="btn-import-video-link" class="btn btn-primary" onclick="importVideoLink()" style="font-size: 0.8rem; font-weight: bold; padding: 10px 14px; border-radius: 10px; background: var(--color-sage); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">Import</button>
+                        
+                        <!-- Paste Video Link Box -->
+                        <div class="video-link-box" style="display: flex; flex-direction: column; gap: 4px;">
+                            <label for="video-link-input" style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Import Video URL</label>
+                            <div style="display: flex; gap: 6px;">
+                                <input type="text" id="video-link-input" placeholder="URL..." style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2); color: #fff; font-family: var(--font-body); font-size: 0.78rem; outline: none; width: 50%;">
+                                <button id="btn-import-video-link" class="btn btn-primary" onclick="importVideoLink()" style="font-size: 0.75rem; font-weight: bold; padding: 8px 10px; border-radius: 8px; background: var(--color-sage); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">Import</button>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Process Audio Button -->
-                    <button id="btn-transcribe-audio" class="btn btn-primary" onclick="transcribeAudio()" disabled style="width: 100%; font-weight: bold; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--color-text-dim); border: 1px solid var(--panel-border); font-size: 0.9rem; cursor: not-allowed;">
+                    <button id="btn-transcribe-audio" class="btn btn-primary" onclick="transcribeAudio()" disabled style="width: 100%; font-weight: bold; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--color-text-dim); border: 1px solid var(--panel-border); font-size: 0.8rem; cursor: not-allowed;">
                         ✨ Transcribe Audio
                     </button>
                     
                     <!-- Transcription Area -->
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                        <label for="note-transcript-text" style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase; display: flex; justify-content: space-between;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                        <label for="note-transcript-text" style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase; display: flex; justify-content: space-between;">
                             <span>📝 Transcript Review</span>
                             <span id="word-count-badge" style="color: var(--color-text-dim); text-transform: none;">0 words</span>
                         </label>
-                        <textarea id="note-transcript-text" placeholder="Your transcribed text will appear here. You can also type or paste content directly to summarize..." style="width: 100%; flex: 1; min-height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 12px; padding: 10px; color: var(--color-cream); font-family: var(--font-body); font-size: 0.82rem; resize: vertical; outline: none; line-height: 1.4;"></textarea>
+                        <textarea id="note-transcript-text" placeholder="Your transcribed text will appear here. You can also type or paste content directly to summarize..." style="width: 100%; flex: 1; min-height: 80px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; padding: 8px; color: var(--color-cream); font-family: var(--font-body); font-size: 0.78rem; resize: none; outline: none; line-height: 1.35;"></textarea>
                     </div>
                 </div>
 
                 <!-- Right Column: Note Configuration, Summarization & Export -->
-                <div class="summary-column" style="display: flex; flex-direction: column; gap: 16px; background: rgba(0, 0, 0, 0.15); padding: 20px; border-radius: 18px; border: 1px solid var(--panel-border);">
-                    <h3 style="color: var(--color-mint); margin-top: 0; font-family: var(--font-heading); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">✨ Summarize & Export</h3>
+                <div class="summary-column" style="display: flex; flex-direction: column; gap: 10px; background: rgba(0, 0, 0, 0.15); padding: 12px; border-radius: 14px; border: 1px solid var(--panel-border);">
+                    <h3 style="color: var(--color-mint); margin-top: 0; margin-bottom: 2px; font-family: var(--font-heading); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">✨ Summarize & Export</h3>
                     
                     <!-- Note Type Selector -->
-                    <div class="note-type-box" style="display: flex; flex-direction: column; gap: 6px;">
-                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Choose Note Type</label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <label class="note-type-label" style="display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; cursor: pointer; font-size: 0.82rem; color: var(--color-cream);">
+                    <div class="note-type-box" style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Choose Note Type</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <label class="note-type-label" style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; cursor: pointer; font-size: 0.78rem; color: var(--color-cream);">
                                 <input type="radio" name="note-agent-type" value="meeting" checked style="accent-color: var(--color-mint);">
                                 <span>👥 Meeting Notes</span>
                             </label>
-                            <label class="note-type-label" style="display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; cursor: pointer; font-size: 0.82rem; color: var(--color-cream);">
+                            <label class="note-type-label" style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; cursor: pointer; font-size: 0.78rem; color: var(--color-cream);">
                                 <input type="radio" name="note-agent-type" value="lecture" style="accent-color: var(--color-mint);">
                                 <span>🎓 Lecture Summary</span>
                             </label>
@@ -941,35 +939,35 @@
                     </div>
                     
                     <!-- Summarize Action Button -->
-                    <button id="btn-summarize-transcript" class="btn btn-primary" onclick="summarizeTranscript()" style="width: 100%; font-weight: bold; padding: 12px; border-radius: 12px; font-size: 0.9rem; background: var(--color-mint); border: none; color: var(--bg-dark); box-shadow: 0 4px 12px rgba(135,195,143,0.2);">
+                    <button id="btn-summarize-transcript" class="btn btn-primary" onclick="summarizeTranscript()" style="width: 100%; font-weight: bold; padding: 8px; border-radius: 8px; font-size: 0.8rem; background: var(--color-mint); border: none; color: var(--bg-dark); box-shadow: 0 4px 10px rgba(135,195,143,0.15);">
                         ⚡ Generate Notes & Summary
                     </button>
                     
                     <!-- Output Preview Container -->
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">📋 Generated Output Preview</label>
-                        <div id="note-summary-preview" style="width: 100%; flex: 1; min-height: 120px; background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 12px; color: var(--color-cream); font-size: 0.82rem; overflow-y: auto; line-height: 1.4; text-align: left; max-height: 250px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                        <label style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">📋 Generated Output Preview</label>
+                        <div id="note-summary-preview" style="width: 100%; flex: 1; min-height: 80px; background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 10px; padding: 8px; color: var(--color-cream); font-size: 0.78rem; overflow-y: auto; line-height: 1.35; text-align: left; max-height: 150px;">
                             <span style="color: var(--color-text-dim); font-style: italic;">No summary generated yet. Transcribe audio and click generate.</span>
                         </div>
                     </div>
 
                     <!-- Export and Export details -->
-                    <div class="export-box" style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
-                        <div class="form-group" style="display: flex; flex-direction: column; gap: 4px;">
-                            <label for="note-filename" style="font-size: 0.72rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Export Filename</label>
-                            <input type="text" id="note-filename" placeholder="e.g. biology_lecture_notes" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; color: var(--color-cream); font-size: 0.82rem; outline: none;">
+                    <div class="export-box" style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 2px;">
+                            <label for="note-filename" style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Export Filename</label>
+                            <input type="text" id="note-filename" placeholder="e.g. biology_lecture_notes" style="width: 100%; padding: 6px 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--color-cream); font-size: 0.78rem; outline: none;">
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; align-items: center;">
-                            <div class="form-group" style="display: flex; flex-direction: column; gap: 4px;">
-                                <label for="note-format" style="font-size: 0.72rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Format</label>
-                                <select id="note-format" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 10px; color: var(--color-cream); font-size: 0.82rem; outline: none; cursor: pointer;">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; align-items: center;">
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 2px;">
+                                <label for="note-format" style="font-size: 0.68rem; font-weight: 700; color: var(--color-sage); text-transform: uppercase;">Format</label>
+                                <select id="note-format" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); border-radius: 8px; color: var(--color-cream); font-size: 0.78rem; outline: none; cursor: pointer;">
                                     <option value="pdf" selected>📄 PDF Document (.pdf)</option>
                                     <option value="docx">📝 Word Document (.docx)</option>
                                 </select>
                             </div>
                             
-                            <button id="btn-export-notes" class="btn btn-primary" onclick="exportNotes()" disabled style="font-weight: bold; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-top: 18px; background: rgba(255,255,255,0.05); color: var(--color-text-dim); border: 1px solid var(--panel-border); cursor: not-allowed;">
+                            <button id="btn-export-notes" class="btn btn-primary" onclick="exportNotes()" disabled style="font-weight: bold; padding: 8px; border-radius: 8px; font-size: 0.78rem; margin-top: 10px; background: rgba(255,255,255,0.05); color: var(--color-text-dim); border: 1px solid var(--panel-border); cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 4px;">
                                 📥 Export & Save
                             </button>
                         </div>

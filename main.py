@@ -894,35 +894,49 @@ def notes_transcribe():
         import tempfile
         import time
         
+        print(f"[Notes Transcribe] Received upload request: {audio_file.filename}, content_type: {audio_file.content_type}")
+        
         # Save to a temporary file preserving its original extension
         suffix = os.path.splitext(audio_file.filename)[1] or '.webm'
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             audio_file.save(temp_file.name)
             temp_path = temp_file.name
+            
+        file_size = os.path.getsize(temp_path)
+        print(f"[Notes Transcribe] Saved to temporary file: {temp_path}, size: {file_size} bytes")
 
         media_file = None
         try:
             # Upload using Files API
+            print(f"[Notes Transcribe] Uploading file via Files API...")
             media_file = active_client.files.upload(file=temp_path)
+            print(f"[Notes Transcribe] Upload response received. File name: {media_file.name}, initial state: {media_file.state.name}")
             
             # Wait for file processing to complete
             while media_file.state.name == "PROCESSING":
                 time.sleep(1)
                 media_file = active_client.files.get(name=media_file.name)
+                print(f"[Notes Transcribe] Polling file state: {media_file.state.name}")
                 
             if media_file.state.name == "FAILED":
-                raise Exception("Audio file processing failed on Gemini.")
+                err_msg = "Unknown Gemini processing error"
+                if hasattr(media_file, 'error') and media_file.error:
+                    err_msg = getattr(media_file.error, 'message', str(media_file.error))
+                print(f"[Notes Transcribe] File state is FAILED. Error: {err_msg}")
+                raise Exception(f"Audio/video file processing failed on Gemini: {err_msg}")
 
-            # Call Gemini to transcribe
+            print(f"[Notes Transcribe] File processing succeeded. Sending model request for transcription...")
+            # Call Gemini to transcribe (supporting both audio and video container files)
             response = active_client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=[
                     media_file,
-                    "Please transcribe the following audio recording with extremely high fidelity. Output the transcription directly, word-for-word, without any additional explanations, notes, or introductions."
+                    "Please transcribe the audio/dialogue in this file with extremely high fidelity. Output the transcription directly, word-for-word, without any additional explanations, notes, or introductions."
                 ]
             )
             
             transcript = response.text or ""
+            print(f"[Notes Transcribe] Transcription successfully generated. Word count: {len(transcript.split())}")
             increment_daily_quota_count(1)
             return jsonify({'success': True, 'transcript': transcript, 'calls_made': 1})
         finally:
