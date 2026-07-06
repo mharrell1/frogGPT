@@ -153,20 +153,20 @@ frogGPT is designed as a modular, decoupled application separating the user-faci
 
 ```mermaid
 graph TD
-    User([User / Browser]) <-->|HTTP / WebSockets| Flask[Flask Web App]
-    Flask <-->|Direct SQLite Connection| DB[(tasks.db)]
+    User(["User / Browser"]) <-->|HTTP / WebSockets| Flask["Flask Web App"]
+    Flask <-->|Direct SQLite Connection| DB[("tasks.db")]
     
     subgraph MAS["Multi-Agent System (ADK 2.0)"]
-        Flask <-->|Runner.run| RootAgent[study_agent (Coordinator)]
-        RootAgent <-->|Task Delegation| Flashcard[flashcard_agent]
-        RootAgent <-->|Task Delegation| Quiz[quiz_agent]
-        RootAgent <-->|Task Delegation| Test[test_agent]
-        RootAgent <-->|Task Delegation| Explain[explain_agent]
-        RootAgent <-->|Task Delegation| Guide[study_guide_agent]
+        Flask <-->|Runner.run| RootAgent["study_agent (Coordinator)"]
+        RootAgent <-->|Task Delegation| Flashcard["flashcard_agent"]
+        RootAgent <-->|Task Delegation| Quiz["quiz_agent"]
+        RootAgent <-->|Task Delegation| Test["test_agent"]
+        RootAgent <-->|Task Delegation| Explain["explain_agent"]
+        RootAgent <-->|Task Delegation| Guide["study_guide_agent"]
     end
 
     subgraph MCP_Integration["MCP Server Integration"]
-        RootAgent <-->|Stdio / JSON-RPC| MCP[MCP Database Server]
+        RootAgent <-->|Stdio / JSON-RPC| MCP["MCP Database Server"]
         MCP <-->|SQLite Query / Mutation| DB
     end
 ```
