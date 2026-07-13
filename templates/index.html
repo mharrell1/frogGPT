@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Outfit:wght@100..900&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.2.5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.2.8">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/study_frog.jpg') }}">
 </head>
 <body>
@@ -82,7 +82,7 @@
         <section class="mascot-card">
             <div class="mascot-content">
                 <div class="mascot-img-container">
-                    <img src="{{ url_for('static', filename='images/study_frog.jpg') }}" alt="Lily the Study Frog" class="mascot-img" id="lily-mascot">
+                    <img src="{{ url_for('static', filename='images/study_frog.jpg') }}" alt="Lily the Study Frog" class="mascot-img" id="lily-mascot" onclick="triggerMotivationBoost(event, this)">
                     <div class="mascot-glow"></div>
                 </div>
                 <div class="speech-bubble">
@@ -187,7 +187,7 @@
                     <div class="music-note note-3">🐸</div>
                     
                     <div class="frog-headphone-container">
-                        <img src="{{ url_for('static', filename='images/study_frog.jpg') }}" alt="Lily the Study Frog" class="frog-img" id="frog-mascot-img">
+                        <img src="{{ url_for('static', filename='images/study_frog.jpg') }}" alt="Lily the Study Frog" class="frog-img" id="frog-mascot-img" onclick="triggerMotivationBoost(event, this)">
                         <!-- Headphone overlay that becomes visible/animates when music is playing -->
                         <div class="headphones-overlay" id="headphones-overlay">🎧</div>
                     </div>
@@ -359,7 +359,7 @@
                 <h2>📅 Lily's Study Calendar</h2>
                 <div class="calendar-controls" id="calendar-header-controls">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">◀</button>
-                    <span id="calendar-month-year" class="calendar-month-year">June 2026</span>
+                    <span id="calendar-month-year" class="calendar-month-year">Month Year</span>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="changeMonth(1)">▶</button>
                 </div>
                 <button class="btn-close" onclick="closeCalendarModal()">&times;</button>
@@ -1083,6 +1083,6 @@
 
     <!-- Marked.js CDN for Markdown Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2.5"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2.8"></script>
 </body>
 </html>

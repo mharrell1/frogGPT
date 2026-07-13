@@ -343,6 +343,24 @@ const LILY_SPEECH = {
         "Yay! You completed a task! Ribbit, ribbit!",
         "Beautiful! One task down, a cleaner pond ahead!",
         "Fantastic job checking that off! Feel the progress!"
+    ],
+    motivation: [
+        "One leap at a time! Break down big tasks into little ribbits. 🐸",
+        "Don't forget to take a deep breath. You're doing great! 🌿",
+        "Stay hydrated! Have a sip of water, study partner! 💧",
+        "A clean lily pad makes for a clear mind. Ribbit! 🍃",
+        "Every hop counts, no matter how small. Keep going! ✨",
+        "Is it time for a short break? Lily recommends stretching your legs! 🤸‍♂️",
+        "Cozy vibes only. Let's study peacefully today! 🕯️",
+        "You are toad-ally awesome! Keep up the great work! 🐸💚",
+        "Believe in yourself, study partner! You can hop over any obstacle! 🌟",
+        "Don't worry, be hoppy! You're making progress every single day! 🍀",
+        "Un-frog-ettable work! Let's conquer the next leap together! 💪",
+        "You've got this! Just like water off a lily pad, let the stress slide away! 💧🍃",
+        "Hop big, study cozy! You are capable of amazing things! ✨",
+        "Ribbit! Your productivity is leaping to new heights! 🚀🐸",
+        "Focus on the present ripple, not the whole pond. One task at a time! 🌊",
+        "Your effort is absolutely ribbit-ing! Keep shining, superstar! ⭐"
     ]
 };
 
@@ -494,7 +512,14 @@ function resetTimer() {
 /* --- Tasks (To-Do) Backend APIs & Cloud Sync --- */
 /* --- State Variables for Calendar, Category, and Urgency --- */
 let allTasks = [];
-let calendarDate = new Date(Date.UTC(2026, 5, 22)); // Initialized to mock current month: June 2026 in UTC
+function getFormattedDateString(date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+const todayDate = new Date();
+let calendarDate = new Date(Date.UTC(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate())); // Initialized to today's date in UTC
 let selectedDateFilter = null; // YYYY-MM-DD
 let customCategories = JSON.parse(localStorage.getItem('froggy_custom_categories') || '[]');
 
@@ -614,7 +639,7 @@ function renderTasks(tasks) {
         
         const catColor = getCategoryColor(task.category || 'School');
         const formattedDate = task.due_date ? formatReadableDate(task.due_date) : 'No due date';
-        const todayStr = '2026-06-22';
+        const todayStr = getFormattedDateString(new Date());
         const isOverdue = !task.completed && task.due_date && task.due_date < todayStr;
         
         li.innerHTML = `
@@ -676,7 +701,7 @@ function updateTopDashboardStats(tasks, completedCount) {
     if (completedEl) completedEl.textContent = `${percent}%`;
     
     if (mascotMsgEl) {
-        const todayStr = '2026-06-22';
+        const todayStr = getFormattedDateString(new Date());
         const overdueCount = tasks.filter(t => !t.completed && t.due_date && t.due_date < todayStr).length;
         
         if (overdueCount > 0) {
@@ -808,7 +833,7 @@ async function handleAddTask(event) {
             if (response.ok) {
                 input.value = '';
                 // reset fields back to defaults
-                document.getElementById('task-due-date').value = '2026-06-22';
+                document.getElementById('task-due-date').value = getFormattedDateString(new Date());
                 document.getElementById('task-urgency').value = 'medium';
                 speak('taskAdded');
                 fetchTasks();
@@ -833,7 +858,7 @@ async function handleAddTask(event) {
         tasks.unshift(newTask);
         saveLocalTasks(tasks);
         input.value = '';
-        document.getElementById('task-due-date').value = '2026-06-22';
+        document.getElementById('task-due-date').value = getFormattedDateString(new Date());
         document.getElementById('task-urgency').value = 'medium';
         speak('taskAdded');
         fetchTasks();
@@ -1002,10 +1027,10 @@ window.addEventListener('DOMContentLoaded', () => {
     timeLeft = workDuration;
     updateTimerDisplay();
 
-    // Set mock date on due date field: 2026-06-22
+    // Set mock date on due date field
     const taskDueDate = document.getElementById('task-due-date') || document.getElementById('task-due-date-modal');
     if (taskDueDate) {
-        taskDueDate.value = '2026-06-22';
+        taskDueDate.value = getFormattedDateString(new Date());
     }
     
     // Populate categories select lists
@@ -1019,6 +1044,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Sync the quota indicators immediately on page load
     syncQuotaWithServer();
+
+    // Attach click events to Lily for motivation bursts
+    initLilyMotivationBoost();
 });
 
 /* --- Category Management Helpers --- */
@@ -1207,7 +1235,7 @@ function renderCalendar() {
         grid.appendChild(emptyCell);
     }
     
-    const mockTodayStr = '2026-06-22';
+    const mockTodayStr = getFormattedDateString(new Date());
     
     for (let day = 1; day <= totalDays; day++) {
         const cell = document.createElement('div');
@@ -1290,7 +1318,7 @@ function renderCalendar() {
     }
     
     // Update the selected day events list in the calendar modal sidebar
-    renderCalendarDayEvents(selectedDateFilter || '2026-06-22');
+    renderCalendarDayEvents(selectedDateFilter || getFormattedDateString(new Date()));
 }
 
 function renderCalendarDayEvents(dateStr) {
@@ -1329,9 +1357,10 @@ function renderCalendarDayEvents(dateStr) {
         
         taskEl.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
-                <span style="font-size: 1.1rem; cursor: pointer; user-select: none;" onclick="toggleCalendarTaskComplete('${task.id}', ${!task.completed})">
-                    ${task.completed ? '🌸' : '⚪'}
-                </span>
+                <label class="checkbox-container" style="margin-bottom: 0;">
+                    <input type="checkbox" id="cal-check-${task.id}" ${task.completed ? 'checked' : ''} onchange="toggleCalendarTaskComplete('${task.id}', this.checked)">
+                    <span class="checkmark"></span>
+                </label>
                 <span style="color: ${task.completed ? 'var(--color-text-dim)' : 'var(--color-cream)'}; text-decoration: ${task.completed ? 'line-through' : 'none'}; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
                     ${escapeHTML(task.title)}
                 </span>
@@ -1354,7 +1383,7 @@ window.toggleCalendarTaskComplete = async function(id, completed) {
     if (selectedDateFilter) {
         renderCalendarDayEvents(selectedDateFilter);
     } else {
-        renderCalendarDayEvents('2026-06-22');
+        renderCalendarDayEvents(getFormattedDateString(new Date()));
     }
 };
 
@@ -1396,7 +1425,7 @@ function openCalendarModal() {
     const modal = document.getElementById('calendar-modal');
     if (modal) {
         modal.classList.add('open');
-        document.getElementById('cal-item-date').value = selectedDateFilter || '2026-06-22';
+        document.getElementById('cal-item-date').value = selectedDateFilter || getFormattedDateString(new Date());
         populateCategoryDropdowns();
         renderCalendar();
     }
@@ -1462,7 +1491,7 @@ async function handleCalendarAdd(event) {
             });
             if (response.ok) {
                 titleInput.value = '';
-                dateInput.value = selectedDateFilter || '2026-06-22';
+                dateInput.value = selectedDateFilter || getFormattedDateString(new Date());
                 speak('taskAdded');
                 fetchTasks();
             } else {
@@ -1486,7 +1515,7 @@ async function handleCalendarAdd(event) {
         tasks.unshift(newTask);
         saveLocalTasks(tasks);
         titleInput.value = '';
-        dateInput.value = selectedDateFilter || '2026-06-22';
+        dateInput.value = selectedDateFilter || getFormattedDateString(new Date());
         speak('taskAdded');
         fetchTasks();
     }
@@ -1961,7 +1990,10 @@ function closeFrogGPTModal() {
     if (sidebarBtn) sidebarBtn.classList.remove('active');
 }
 
-function handleQuickPrompt(promptText) {
+function handleQuickPrompt(promptText, clearImport = true) {
+    if (clearImport) {
+        clearImportedDocument();
+    }
     const input = document.getElementById('froggpt-input');
     if (input) {
         input.value = promptText;
@@ -3487,8 +3519,11 @@ async function toggleFrogGPTHistoryList() {
     }
 }
 
-function startNewFrogGPTSession() {
+function startNewFrogGPTSession(clearImport = true) {
     frogGPTSessionId = null;
+    if (clearImport) {
+        clearImportedDocument();
+    }
     const chatLog = document.getElementById('froggpt-chat-log');
     if (chatLog) {
         chatLog.innerHTML = `
@@ -3596,7 +3631,7 @@ function openAddTaskModal(datePrefill = null) {
     document.getElementById('btn-save-task').textContent = 'Save Task';
     
     // Default Date prefill (Mock current date or today)
-    const todayStr = '2026-06-22';
+    const todayStr = getFormattedDateString(new Date());
     document.getElementById('task-due-date-modal').value = datePrefill || todayStr;
     
     // Hide Custom Category Inputs
@@ -3702,7 +3737,7 @@ window.editTask = function(id) {
     document.getElementById('btn-save-task').textContent = 'Save Changes';
     
     document.getElementById('task-title').value = task.title || '';
-    document.getElementById('task-due-date-modal').value = task.due_date || '2026-06-22';
+    document.getElementById('task-due-date-modal').value = task.due_date || getFormattedDateString(new Date());
     document.getElementById('task-urgency-modal').value = task.urgency || 'medium';
     
     populateCategoryDropdowns();
@@ -4871,17 +4906,17 @@ window.studyNotesWithFrogGPT = function(noteId, action) {
                 // Close Library view inside frogGPT if open
                 showStudyPanelPlaceholder();
 
-                // Start a fresh frogGPT session to avoid task routing conflicts
-                startNewFrogGPTSession();
+                // Start a fresh frogGPT session without clearing the imported notes context
+                startNewFrogGPTSession(false);
 
                 // Open frogGPT chat
                 openFrogGPTModal();
                 switchFrogGPTTab('chat');
 
-                // Submit prompt
+                // Submit prompt without clearing imported notes context
                 setTimeout(() => {
                     try {
-                        handleQuickPrompt(promptText);
+                        handleQuickPrompt(promptText, false);
                     } catch(promptErr) {
                         console.error("handleQuickPrompt failed:", promptErr);
                         alert("❌ handleQuickPrompt failed: " + promptErr.message);
@@ -6072,3 +6107,145 @@ window.summarizeTranscript = summarizeTranscript;
 window.exportNotes = exportNotes;
 window.updateWordCount = updateWordCount;
 window.importVideoLink = importVideoLink;
+
+// --- Lily Motivation Boost Implementation ---
+let currentToast = null;
+let toastTimeout = null;
+
+function showMotivationToast(quote) {
+    let toast = document.getElementById('lily-motivation-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'lily-motivation-toast';
+        toast.className = 'motivation-toast';
+        toast.innerHTML = `
+            <div class="motivation-toast-icon">🐸</div>
+            <div class="motivation-toast-content">
+                <div class="motivation-toast-title">Lily's Motivation Boost!</div>
+                <div class="motivation-toast-text" id="motivation-toast-text"></div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+    }
+
+    const textEl = document.getElementById('motivation-toast-text');
+    textEl.textContent = quote;
+
+    // Trigger visual update (scale bounce)
+    toast.classList.remove('show');
+    // force reflow
+    toast.offsetHeight;
+    toast.classList.add('show');
+
+    // Reset timeout
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+    }
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4500);
+}
+
+function triggerMotivationBoost(event, clickedElement) {
+    // 1. Play the hop animation
+    clickedElement.classList.add('frog-jump-anim');
+    clickedElement.addEventListener('animationend', () => {
+        clickedElement.classList.remove('frog-jump-anim');
+    }, { once: true });
+
+    // 2. Choose a random motivational quote
+    const list = LILY_SPEECH.motivation;
+    const quote = list[Math.floor(Math.random() * list.length)];
+
+    // 3. Update both bubble-text and mascot-message if they exist
+    const bubbleText = document.getElementById('bubble-text');
+    const mascotMsgEl = document.getElementById('mascot-message');
+    if (bubbleText) {
+        bubbleText.textContent = quote;
+        // Make speech bubble scale slightly for feedback
+        const speechBubbleEl = bubbleText.closest('.lily-speech-bubble') || document.getElementById('lily-speech');
+        if (speechBubbleEl) {
+            speechBubbleEl.style.transform = 'scale(1.05)';
+            setTimeout(() => { speechBubbleEl.style.transform = ''; }, 200);
+        }
+    }
+    if (mascotMsgEl) {
+        mascotMsgEl.textContent = quote;
+        const topSpeechBubble = mascotMsgEl.closest('.speech-bubble');
+        if (topSpeechBubble) {
+            topSpeechBubble.style.transform = 'scale(1.05)';
+            setTimeout(() => { topSpeechBubble.style.transform = ''; }, 200);
+        }
+    }
+
+    // 4. Create particle burst at click location
+    // Fallback to center of element if event.clientX is undefined
+    let clickX = event.clientX;
+    let clickY = event.clientY;
+    if (clickX === undefined || clickY === undefined) {
+        const rect = clickedElement.getBoundingClientRect();
+        clickX = rect.left + rect.width / 2;
+        clickY = rect.top + rect.height / 2;
+    }
+
+    const emojis = ['✨', '⭐', '💖', '💪', '🐸', '🍀', '🧠', '🌈', '🎯', '🚀', '🥳'];
+    const particleCount = 12 + Math.floor(Math.random() * 6);
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'motivation-particle';
+        particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        particle.style.left = `${clickX}px`;
+        particle.style.top = `${clickY}px`;
+        document.body.appendChild(particle);
+
+        // Force reflow
+        particle.offsetHeight;
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 50 + Math.random() * 100;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance - 40; // shift upward
+        const scale = 0.8 + Math.random() * 0.8;
+        const rotation = (Math.random() - 0.5) * 540;
+
+        particle.style.opacity = '1';
+        particle.style.transform = 'translate(-50%, -50%) scale(0.4) rotate(0deg)';
+        
+        // Update styles
+        setTimeout(() => {
+            particle.style.opacity = '0';
+            particle.style.transform = `translate(-50%, -50%) translate(${tx}px, ${ty}px) scale(${scale}) rotate(${rotation}deg)`;
+        }, 10);
+
+        setTimeout(() => {
+            particle.remove();
+        }, 1250);
+    }
+
+    // 5. Show custom Toast
+    showMotivationToast(quote);
+}
+
+function initLilyMotivationBoost() {
+    const lilyMascot = document.getElementById('lily-mascot');
+    const frogMascotImg = document.getElementById('frog-mascot-img');
+    
+    if (lilyMascot) {
+        lilyMascot.addEventListener('click', (e) => {
+            triggerMotivationBoost(e, lilyMascot);
+        });
+    }
+    
+    if (frogMascotImg) {
+        frogMascotImg.addEventListener('click', (e) => {
+            triggerMotivationBoost(e, frogMascotImg);
+        });
+    }
+}
+
+// Window exports
+window.initLilyMotivationBoost = initLilyMotivationBoost;
+window.triggerMotivationBoost = triggerMotivationBoost;
+window.showMotivationToast = showMotivationToast;
+

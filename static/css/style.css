@@ -4055,3 +4055,135 @@ input[type=number] {
         height: 80px !important;
     }
 }
+
+/* --- Lily the Frog click-to-motivate interaction styling --- */
+.frog-img, .mascot-img {
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.frog-img:hover {
+    transform: scale(1.04);
+    box-shadow: 0 12px 35px rgba(135,195,143,0.5);
+    border-color: var(--color-mint);
+}
+
+.mascot-img:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 15px rgba(135,195,143,0.5);
+    border-color: var(--color-mint);
+}
+
+.frog-img:active, .mascot-img:active {
+    transform: scale(0.95);
+}
+
+/* Hop animation for when Lily is clicked */
+@keyframes frog-jump-bounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    15% {
+        transform: translateY(-15px) scaleY(1.1) scaleX(0.95);
+    }
+    30% {
+        transform: translateY(-20px) scaleY(1.15) scaleX(0.9);
+    }
+    45% {
+        transform: translateY(-22px) scale(1);
+    }
+    60% {
+        transform: translateY(0) scaleY(0.9) scaleX(1.1);
+    }
+    80% {
+        transform: translateY(0) scaleY(0.95) scaleX(1.05);
+    }
+}
+
+.frog-jump-anim {
+    animation: frog-jump-bounce 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+/* Floating Motivation Particles */
+.motivation-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    font-size: 1.6rem;
+    will-change: transform, opacity;
+    transition: transform 1.2s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 1.2s ease, filter 1.2s ease;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));
+    user-select: none;
+}
+
+/* Glassmorphic Motivation Toast */
+.motivation-toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: rgba(18, 34, 30, 0.95);
+    border: 2px solid var(--color-sage);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(135, 195, 143, 0.3);
+    border-radius: 16px;
+    padding: 16px 20px;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 380px;
+    color: var(--color-cream);
+    transform: translateY(100px) scale(0.9);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.4s ease;
+}
+
+.motivation-toast.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.motivation-toast-icon {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 5px rgba(135,195,143,0.4));
+    animation: pulse-icon 1.5s infinite alternate;
+}
+
+.motivation-toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.motivation-toast-title {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    color: var(--color-mint);
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.motivation-toast-text {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--color-cream);
+}
+
+@keyframes pulse-icon {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.15) rotate(8deg); }
+}
+
+@media (max-width: 480px) {
+    .motivation-toast {
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        max-width: none;
+    }
+}
+
